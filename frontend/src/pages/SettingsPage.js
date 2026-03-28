@@ -147,9 +147,14 @@ export const SettingsPage = () => {
   const handleConfirmImport = async () => {
     try {
       setImporting(true);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+      
       const promises = parsedEntries.map(entry => {
-        const today = new Date();
-        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${entry.day || String(today.getDate()).padStart(2, '0')}`;
+        // Use the day from parsed entry, or current day if not available
+        const day = entry.day ? parseInt(entry.day) : currentDate.getDate();
+        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
         if (importType === 'income') {
           return axios.post(`${API}/income`, {
@@ -157,18 +162,42 @@ export const SettingsPage = () => {
             day: getDayName(dateStr),
             amount: entry.amount,
             product_name: entry.product_or_description,
-            person_name: entry.person_name || '',
+            person_name: entry.person_name || 'Unknown',
             notes: entry.raw_text,
             payment_status: 'Paid',
             reference_number: ''
           });
         } else {
+          // Categorize expenses based on description
+          const description = entry.product_or_description.toLowerCase();
+          let category = 'Miscellaneous';
+          
+          if (description.includes('food') || description.includes('lunch') || description.includes('dinner') || description.includes('breakfast') || description.includes('meryenda') || description.includes('ulam') || description.includes('hapunan') || description.includes('umagahan')) {
+            category = 'Food';
+          } else if (description.includes('offering') || description.includes('church')) {
+            category = 'Offering';
+          } else if (description.includes('gas') || description.includes('fuel')) {
+            category = 'Gas';
+          } else if (description.includes('grocery') || description.includes('market')) {
+            category = 'Grocery';
+          } else if (description.includes('utilities') || description.includes('bill') || description.includes('electric') || description.includes('water')) {
+            category = 'Utilities';
+          } else if (description.includes('transport') || description.includes('taxi') || description.includes('grab') || description.includes('motor')) {
+            category = 'Transportation';
+          } else if (description.includes('personal') || description.includes('baon')) {
+            category = 'Personal';
+          } else if (description.includes('load') || description.includes('prepaid')) {
+            category = 'Load';
+          } else if (description.includes('medical') || description.includes('medicine') || description.includes('doctor')) {
+            category = 'Medical';
+          }
+          
           return axios.post(`${API}/expenses`, {
             date: dateStr,
             day: getDayName(dateStr),
             amount: entry.amount,
             description: entry.product_or_description,
-            category_name: 'Miscellaneous',
+            category_name: category,
             notes: entry.raw_text,
             payment_method: 'Cash',
             reference_number: ''
@@ -177,11 +206,15 @@ export const SettingsPage = () => {
       });
 
       await Promise.all(promises);
-      toast.success(`Successfully imported ${parsedEntries.length} entries`);
+      toast.success(`Successfully imported ${parsedEntries.length} ${importType} entries`);
       setImportDialogOpen(false);
       setImportText('');
       setParsedEntries([]);
+      
+      // Refresh the page data if needed
+      window.location.reload();
     } catch (error) {
+      console.error('Import error:', error);
       toast.error('Failed to import entries');
     } finally {
       setImporting(false);
