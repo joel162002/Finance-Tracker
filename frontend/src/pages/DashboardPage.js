@@ -251,25 +251,25 @@ export const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="product-chart">
-          <h3 className="text-xl sm:text-2xl font-medium text-slate-800 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="product-chart">
+          <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Income by Product
           </h3>
           {analytics?.product_data && analytics.product_data.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
-                    data={analytics.product_data.slice(0, 8)}
+                    data={analytics.product_data.slice(0, 6)}
                     cx="50%"
-                    cy="50%"
+                    cy="45%"
                     labelLine={false}
                     label={false}
-                    outerRadius={100}
+                    outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {analytics.product_data.slice(0, 8).map((entry, index) => (
+                    {analytics.product_data.slice(0, 6).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -282,19 +282,27 @@ export const DashboardPage = () => {
                       padding: '8px 12px'
                     }}
                   />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36}
-                    iconType="circle"
-                    formatter={(value, entry) => {
-                      const percent = ((entry.payload.value / analytics.product_data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0);
-                      return `${value} (${percent}%)`;
-                    }}
-                  />
                 </PieChart>
               </ResponsiveContainer>
-              {analytics.product_data.length > 8 && (
-                <p className="text-xs text-slate-500 text-center mt-2">Showing top 8 products</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                {analytics.product_data.slice(0, 6).map((item, index) => {
+                  const total = analytics.product_data.reduce((sum, i) => sum + i.value, 0);
+                  const percent = ((item.value / total) * 100).toFixed(0);
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-slate-700 truncate">
+                        {item.name} ({percent}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {analytics.product_data.length > 6 && (
+                <p className="text-xs text-slate-500 text-center mt-3">Showing top 6 products</p>
               )}
             </>
           ) : (
@@ -302,25 +310,25 @@ export const DashboardPage = () => {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="category-chart">
-          <h3 className="text-xl sm:text-2xl font-medium text-slate-800 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="category-chart">
+          <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Expenses by Category
           </h3>
           {analytics?.category_data && analytics.category_data.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
-                    data={analytics.category_data.slice(0, 8)}
+                    data={analytics.category_data.slice(0, 6)}
                     cx="50%"
-                    cy="50%"
+                    cy="45%"
                     labelLine={false}
                     label={false}
-                    outerRadius={100}
+                    outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {analytics.category_data.slice(0, 8).map((entry, index) => (
+                    {analytics.category_data.slice(0, 6).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -333,19 +341,27 @@ export const DashboardPage = () => {
                       padding: '8px 12px'
                     }}
                   />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36}
-                    iconType="circle"
-                    formatter={(value, entry) => {
-                      const percent = ((entry.payload.value / analytics.category_data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0);
-                      return `${value} (${percent}%)`;
-                    }}
-                  />
                 </PieChart>
               </ResponsiveContainer>
-              {analytics.category_data.length > 8 && (
-                <p className="text-xs text-slate-500 text-center mt-2">Showing top 8 categories</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                {analytics.category_data.slice(0, 6).map((item, index) => {
+                  const total = analytics.category_data.reduce((sum, i) => sum + i.value, 0);
+                  const percent = ((item.value / total) * 100).toFixed(0);
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-slate-700 truncate">
+                        {item.name} ({percent}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {analytics.category_data.length > 6 && (
+                <p className="text-xs text-slate-500 text-center mt-3">Showing top 6 categories</p>
               )}
             </>
           ) : (
