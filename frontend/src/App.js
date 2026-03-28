@@ -9,6 +9,7 @@ import { MonthlySummaryPage } from './pages/MonthlySummaryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { Layout } from './components/Layout';
+import { InstallPrompt } from './components/InstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
 
 const PrivateRoute = ({ children }) => {
@@ -133,6 +134,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <AppRoutes />
+        <InstallPrompt />
         <Toaster position="top-right" />
       </BrowserRouter>
     </AuthProvider>
