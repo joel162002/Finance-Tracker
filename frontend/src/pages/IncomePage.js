@@ -45,7 +45,7 @@ export const IncomePage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   
   const [filters, setFilters] = useState({
-    month: getCurrentMonth(),
+    month: '2025-03',
     search: '',
     product_name: '',
     person_name: '',

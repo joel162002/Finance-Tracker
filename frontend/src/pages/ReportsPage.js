@@ -21,7 +21,7 @@ const API = `${BACKEND_URL}/api`;
 export const ReportsPage = () => {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [selectedMonth, setSelectedMonth] = useState('2025-03');
 
   useEffect(() => {
     fetchReports();
