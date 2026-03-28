@@ -1,0 +1,88 @@
+{
+  "project_name": "Income & Expense Tracker",
+  "theme": "light",
+  "archetype": "1 - Organic & Earthy (Professional Slate/Emerald adaptation)",
+  "design_philosophy": "Trust-building minimalism with high-end editorial touches. Eschewing the generic 'SaaS card' look for flat, crisp bento-grids with generous internal padding and optical clarity. Data acts as the hero, framed by deliberate negative space.",
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Manrope",
+    "scale": {
+      "h1": "text-4xl sm:text-5xl tracking-tight font-light text-slate-900",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-medium text-slate-800",
+      "h3": "text-xl sm:text-2xl font-medium text-slate-800",
+      "h4": "text-lg sm:text-xl font-medium text-slate-800",
+      "body": "text-base leading-relaxed text-slate-600",
+      "small": "text-sm text-slate-500",
+      "overline": "text-xs uppercase tracking-[0.2em] font-semibold text-slate-400"
+    }
+  },
+  "colors": {
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "primary": "#1E3A8A",
+    "income_green": "#059669",
+    "expense_red": "#DC2626",
+    "warning_amber": "#D97706",
+    "text_main": "#0F172A",
+    "text_muted": "#475569",
+    "border": "#E2E8F0",
+    "forbidden_colors": ["#1B93A4", "#7351B7", "Inter", "Space Grotesk"]
+  },
+  "layout_and_spacing": {
+    "page_padding": "px-6 py-8 md:px-12 md:py-12",
+    "grid_system": "Control Room Grid (gap-6, grid-cols-1 md:grid-cols-3 lg:grid-cols-4)",
+    "container_radius": "rounded-2xl",
+    "internal_padding": "p-6 sm:p-8",
+    "shadows": {
+      "ambient": "shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]",
+      "hover": "shadow-[0_8px_30px_-4px_rgba(15,23,42,0.1)]"
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "Flat solid surfaces with a delicate 1px border. Do not use generic Shadcn cards out of the box; strip the heavy drop shadows and increase border-radius to 2xl. Increase internal padding to p-6 or p-8."
+    },
+    "buttons": {
+      "primary": "bg-slate-900 text-white hover:bg-slate-800 rounded-xl px-6 py-2.5 transition-all hover:-translate-y-0.5",
+      "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl px-6 py-2.5 transition-all"
+    },
+    "inputs": {
+      "style": "Shadcn standard but override radius to rounded-xl, background to bg-slate-50, and focus ring to ring-slate-900/20"
+    },
+    "tables": {
+      "style": "Left-aligned for textual data, right-aligned for currency. Generous py-4 on cells. Hover states on rows (bg-slate-50/50)."
+    },
+    "charts": {
+      "style": "Use Recharts. Remove default heavy grid lines (use strokeDasharray='3 3' stroke='#f1f5f9'). Use #059669 for income series and #DC2626 for expense series."
+    }
+  },
+  "motion": {
+    "hover": "transition-all duration-300 ease-out",
+    "page_load": "Framer motion staggered fade-up for bento grid children."
+  },
+  "media": {
+    "login_hero_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/f07b6a58-52be-4933-9672-f096982b7978/images/f1b8bf6fb612dae3c22e96a899e47d90dfccfca0f432f2dc4d4789939643884f.png",
+      "description": "Minimalist abstract geometric background for the login screen. Soft slate blue and emerald intersections.",
+      "usage": "Use as a full-bleed background for the login page, overlaid with a glassmorphism (backdrop-blur-xl bg-white/60) login card."
+    },
+    "abstract_accent_1": {
+      "url": "https://images.pexels.com/photos/36025191/pexels-photo-36025191.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Elegant abstract swirl",
+      "usage": "Optional: use inside the 'Settings' or 'Profile' header banner with a dark overlay."
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5, size 20px for body, 24px for headers."
+  },
+  "technical_instructions_to_main_agent": [
+    "Use standard React .js syntax, not .tsx. Avoid TypeScript typings.",
+    "Implement the 'Control Room' grid layout for the Dashboard using Tailwind subgrid or direct children.",
+    "Do not use native <input type='date'>, use Shadcn DatePicker/Calendar.",
+    "Do not use generic HTML <select>, use Shadcn Select component.",
+    "Add 'data-testid' to ALL interactive elements (buttons, inputs, specific table rows) using kebab-case role-based names.",
+    "Ensure all currency is formatted in Philippine Peso (₱).",
+    "Build the dashboard metrics, recent transactions, and expense vs income charts using the defined color palette."
+  ]
+}
