@@ -103,40 +103,46 @@ export const DashboardPage = () => {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            Dashboard
-          </h1>
-          <p className="mt-2 text-base leading-relaxed text-slate-600">
-            Overview of your financial activity
-          </p>
-        </div>
+      <div className="mb-8">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Dashboard
+            </h1>
+            <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
+              Overview of your financial activity
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-            data-testid="month-picker"
-          />
-          <Button
-            onClick={() => navigate('/income')}
-            className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl px-6 py-2.5 transition-all hover:-translate-y-0.5"
-            data-testid="quick-add-income-button"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Income
-          </Button>
-          <Button
-            onClick={() => navigate('/expenses')}
-            className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-6 py-2.5 transition-all hover:-translate-y-0.5"
-            data-testid="quick-add-expense-button"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Expense
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+              data-testid="month-picker"
+            />
+            <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
+              <Button
+                onClick={() => navigate('/income')}
+                className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
+                data-testid="quick-add-income-button"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Add Income</span>
+                <span className="sm:hidden">Income</span>
+              </Button>
+              <Button
+                onClick={() => navigate('/expenses')}
+                className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
+                data-testid="quick-add-expense-button"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Add Expense</span>
+                <span className="sm:hidden">Expense</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -127,7 +127,7 @@ export const Layout = ({ children }) => {
         </div>
       </nav>
 
-      <main className="px-6 py-8 md:px-12 md:py-12">
+      <main className="px-4 sm:px-6 py-6 sm:py-8 md:px-12 md:py-12">
         {children}
       </main>
     </div>

@@ -188,30 +188,32 @@ export const ExpensesPage = () => {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            Expenses
-          </h1>
-          <p className="mt-2 text-base leading-relaxed text-slate-600">
-            Manage and track your expense entries
-          </p>
-        </div>
+      <div className="mb-8">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Expenses
+            </h1>
+            <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
+              Manage and track your expense entries
+            </p>
+          </div>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-6 py-2.5 transition-all hover:-translate-y-0.5"
-              data-testid="add-expense-button"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Expense
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-end">
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button
+                  className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
+                  data-testid="add-expense-button"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Expense
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingItem ? 'Edit Expense Entry' : 'Add New Expense'}</DialogTitle>
             </DialogHeader>
@@ -353,6 +355,8 @@ export const ExpensesPage = () => {
             </form>
           </DialogContent>
         </Dialog>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -366,8 +370,8 @@ export const ExpensesPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-4 mb-6">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -375,41 +379,44 @@ export const ExpensesPage = () => {
                 placeholder="Search expense entries..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="pl-10 rounded-xl bg-slate-50"
+                className="pl-10 rounded-xl bg-slate-50 text-sm"
                 data-testid="expense-search-input"
               />
             </div>
           </div>
-          <input
-            type="month"
-            value={filters.month}
-            onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-            className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700"
-            data-testid="expense-month-filter"
-          />
-          <Button
-            onClick={handleExport}
-            variant="outline"
-            className="rounded-xl"
-            data-testid="export-expense-button"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <input
+              type="month"
+              value={filters.month}
+              onChange={(e) => setFilters({ ...filters, month: e.target.value })}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm"
+              data-testid="expense-month-filter"
+            />
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="rounded-xl text-sm whitespace-nowrap"
+              data-testid="export-expense-button"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {loading ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-slate-600">Loading expense data...</p>
+            <p className="mt-4 text-slate-600 text-sm">Loading expense data...</p>
           </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-slate-500">No expense entries found</p>
+            <p className="text-slate-500 text-sm">No expense entries found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full" data-testid="expense-table">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="w-full" data-testid="expense-table">
               <thead>
                 <tr className="border-b border-slate-200">
                   <th className="text-left py-4 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Date</th>
@@ -461,6 +468,7 @@ export const ExpensesPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
