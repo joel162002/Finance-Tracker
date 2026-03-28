@@ -24,7 +24,7 @@ const EXPENSE_COLOR = '#DC2626';
 export const MonthlySummaryPage = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState('2025-03');
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
   useEffect(() => {
     fetchSummary();

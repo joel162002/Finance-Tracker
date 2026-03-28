@@ -45,7 +45,7 @@ export const ExpensesPage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   
   const [filters, setFilters] = useState({
-    month: '2025-03',
+    month: getCurrentMonth(),
     search: '',
     category_name: ''
   });

@@ -37,7 +37,7 @@ const COLORS = ['#1E3A8A', '#059669', '#D97706', '#DC2626', '#6366F1', '#8B5CF6'
 export const DashboardPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState('2025-03');
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const navigate = useNavigate();
 
   useEffect(() => {
