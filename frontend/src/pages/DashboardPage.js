@@ -256,25 +256,47 @@ export const DashboardPage = () => {
             Income by Product
           </h3>
           {analytics?.product_data && analytics.product_data.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={analytics.product_data}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {analytics.product_data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics.product_data.slice(0, 8)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {analytics.product_data.slice(0, 8).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      background: 'white',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '8px 12px'
+                    }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    iconType="circle"
+                    formatter={(value, entry) => {
+                      const percent = ((entry.payload.value / analytics.product_data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0);
+                      return `${value} (${percent}%)`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {analytics.product_data.length > 8 && (
+                <p className="text-xs text-slate-500 text-center mt-2">Showing top 8 products</p>
+              )}
+            </>
           ) : (
             <p className="text-sm text-slate-500 text-center py-12">No product data yet</p>
           )}
@@ -285,25 +307,47 @@ export const DashboardPage = () => {
             Expenses by Category
           </h3>
           {analytics?.category_data && analytics.category_data.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={analytics.category_data}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {analytics.category_data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics.category_data.slice(0, 8)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {analytics.category_data.slice(0, 8).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      background: 'white',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '8px 12px'
+                    }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    iconType="circle"
+                    formatter={(value, entry) => {
+                      const percent = ((entry.payload.value / analytics.category_data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0);
+                      return `${value} (${percent}%)`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {analytics.category_data.length > 8 && (
+                <p className="text-xs text-slate-500 text-center mt-2">Showing top 8 categories</p>
+              )}
+            </>
           ) : (
             <p className="text-sm text-slate-500 text-center py-12">No expense data yet</p>
           )}
