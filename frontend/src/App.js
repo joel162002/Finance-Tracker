@@ -1,53 +1,141 @@
-import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { IncomePage } from './pages/IncomePage';
+import { ExpensesPage } from './pages/ExpensesPage';
+import { MonthlySummaryPage } from './pages/MonthlySummaryPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { Layout } from './components/Layout';
+import { Toaster } from '@/components/ui/sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const PrivateRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
+
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+};
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+      
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <DashboardPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/income"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <IncomePage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/expenses"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <ExpensesPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/monthly"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <MonthlySummaryPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/reports"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <ReportsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/settings"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <SettingsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <div className="App">
+    <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <AppRoutes />
+        <Toaster position="top-right" />
       </BrowserRouter>
-    </div>
+    </AuthProvider>
   );
 }
 

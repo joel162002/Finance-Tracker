@@ -1,34 +1,31 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.currency-symbol::before {
+  content: '₱';
+  margin-right: 2px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.print-only {
+  display: none;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block;
+  }
+  
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }
 
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.chart-tooltip {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 20px -4px rgba(15,23,42,0.1);
 }

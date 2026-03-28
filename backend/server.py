@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,67 +7,690 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
-
+import re
+import io
+import csv
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# ============ MODELS ============
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    email: str
+    name: str
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class LoginRequest(BaseModel):
+    email: str
+    password: str
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class LoginResponse(BaseModel):
+    token: str
+    user: Dict[str, Any]
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
+class Product(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = ""
+    is_active: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ProductCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    is_active: bool = True
+
+class ExpenseCategory(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = ""
+    is_active: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ExpenseCategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    is_active: bool = True
+
+class IncomeEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    date: str
+    day: str
+    amount: float
+    product_name: str
+    person_name: str
+    notes: Optional[str] = ""
+    payment_status: str = "Paid"
+    reference_number: Optional[str] = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class IncomeEntryCreate(BaseModel):
+    date: str
+    day: str
+    amount: float
+    product_name: str
+    person_name: str
+    notes: Optional[str] = ""
+    payment_status: str = "Paid"
+    reference_number: Optional[str] = ""
+
+class IncomeEntryUpdate(BaseModel):
+    date: Optional[str] = None
+    day: Optional[str] = None
+    amount: Optional[float] = None
+    product_name: Optional[str] = None
+    person_name: Optional[str] = None
+    notes: Optional[str] = None
+    payment_status: Optional[str] = None
+    reference_number: Optional[str] = None
+
+class ExpenseEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    date: str
+    day: str
+    amount: float
+    description: str
+    category_name: str
+    notes: Optional[str] = ""
+    payment_method: Optional[str] = "Cash"
+    reference_number: Optional[str] = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ExpenseEntryCreate(BaseModel):
+    date: str
+    day: str
+    amount: float
+    description: str
+    category_name: str
+    notes: Optional[str] = ""
+    payment_method: Optional[str] = "Cash"
+    reference_number: Optional[str] = ""
+
+class ExpenseEntryUpdate(BaseModel):
+    date: Optional[str] = None
+    day: Optional[str] = None
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    category_name: Optional[str] = None
+    notes: Optional[str] = None
+    payment_method: Optional[str] = None
+    reference_number: Optional[str] = None
+
+class ParsedEntry(BaseModel):
+    type: str
+    day: Optional[str] = ""
+    amount: float
+    product_or_description: str
+    person_name: Optional[str] = ""
+    raw_text: str
+
+class ImportRequest(BaseModel):
+    raw_text: str
+    entry_type: str
+
+# ============ AUTH ENDPOINTS ============
+
+@api_router.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    user_doc = await db.users.find_one({"email": request.email}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+    return LoginResponse(
+        token="demo-token-" + user_doc["id"],
+        user=user_doc
+    )
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.post("/auth/logout")
+async def logout():
+    return {"message": "Logged out successfully"}
 
-# Include the router in the main app
+# ============ PRODUCT ENDPOINTS ============
+
+@api_router.get("/products", response_model=List[Product])
+async def get_products(is_active: Optional[bool] = None):
+    query = {} if is_active is None else {"is_active": is_active}
+    products = await db.products.find(query, {"_id": 0}).to_list(1000)
+    return products
+
+@api_router.post("/products", response_model=Product)
+async def create_product(product: ProductCreate):
+    product_obj = Product(**product.model_dump())
+    doc = product_obj.model_dump()
+    await db.products.insert_one(doc)
+    return product_obj
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: str, product: ProductCreate):
+    update_data = product.model_dump()
+    result = await db.products.update_one(
+        {"id": product_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    updated_doc = await db.products.find_one({"id": product_id}, {"_id": 0})
+    return Product(**updated_doc)
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
+
+# ============ EXPENSE CATEGORY ENDPOINTS ============
+
+@api_router.get("/categories", response_model=List[ExpenseCategory])
+async def get_categories(is_active: Optional[bool] = None):
+    query = {} if is_active is None else {"is_active": is_active}
+    categories = await db.expense_categories.find(query, {"_id": 0}).to_list(1000)
+    return categories
+
+@api_router.post("/categories", response_model=ExpenseCategory)
+async def create_category(category: ExpenseCategoryCreate):
+    category_obj = ExpenseCategory(**category.model_dump())
+    doc = category_obj.model_dump()
+    await db.expense_categories.insert_one(doc)
+    return category_obj
+
+@api_router.put("/categories/{category_id}", response_model=ExpenseCategory)
+async def update_category(category_id: str, category: ExpenseCategoryCreate):
+    update_data = category.model_dump()
+    result = await db.expense_categories.update_one(
+        {"id": category_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    updated_doc = await db.expense_categories.find_one({"id": category_id}, {"_id": 0})
+    return ExpenseCategory(**updated_doc)
+
+@api_router.delete("/categories/{category_id}")
+async def delete_category(category_id: str):
+    result = await db.expense_categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category deleted successfully"}
+
+# ============ INCOME ENDPOINTS ============
+
+@api_router.get("/income", response_model=List[IncomeEntry])
+async def get_income(
+    month: Optional[str] = None,
+    product_name: Optional[str] = None,
+    person_name: Optional[str] = None,
+    payment_status: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None
+):
+    query = {}
+    
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    if date_from and date_to:
+        query["date"] = {"$gte": date_from, "$lte": date_to}
+    
+    if product_name:
+        query["product_name"] = product_name
+    
+    if person_name:
+        query["person_name"] = {"$regex": person_name, "$options": "i"}
+    
+    if payment_status:
+        query["payment_status"] = payment_status
+    
+    if search:
+        query["$or"] = [
+            {"product_name": {"$regex": search, "$options": "i"}},
+            {"person_name": {"$regex": search, "$options": "i"}},
+            {"notes": {"$regex": search, "$options": "i"}}
+        ]
+    
+    income_entries = await db.income_entries.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    return income_entries
+
+@api_router.post("/income", response_model=IncomeEntry)
+async def create_income(income: IncomeEntryCreate, user_id: str = "demo-user"):
+    income_obj = IncomeEntry(user_id=user_id, **income.model_dump())
+    doc = income_obj.model_dump()
+    await db.income_entries.insert_one(doc)
+    return income_obj
+
+@api_router.put("/income/{income_id}", response_model=IncomeEntry)
+async def update_income(income_id: str, income: IncomeEntryUpdate):
+    update_data = {k: v for k, v in income.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.income_entries.update_one(
+        {"id": income_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Income entry not found")
+    
+    updated_doc = await db.income_entries.find_one({"id": income_id}, {"_id": 0})
+    return IncomeEntry(**updated_doc)
+
+@api_router.delete("/income/{income_id}")
+async def delete_income(income_id: str):
+    result = await db.income_entries.delete_one({"id": income_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Income entry not found")
+    return {"message": "Income entry deleted successfully"}
+
+# ============ EXPENSE ENDPOINTS ============
+
+@api_router.get("/expenses", response_model=List[ExpenseEntry])
+async def get_expenses(
+    month: Optional[str] = None,
+    category_name: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None
+):
+    query = {}
+    
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    if date_from and date_to:
+        query["date"] = {"$gte": date_from, "$lte": date_to}
+    
+    if category_name:
+        query["category_name"] = category_name
+    
+    if search:
+        query["$or"] = [
+            {"description": {"$regex": search, "$options": "i"}},
+            {"category_name": {"$regex": search, "$options": "i"}},
+            {"notes": {"$regex": search, "$options": "i"}}
+        ]
+    
+    expense_entries = await db.expense_entries.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    return expense_entries
+
+@api_router.post("/expenses", response_model=ExpenseEntry)
+async def create_expense(expense: ExpenseEntryCreate, user_id: str = "demo-user"):
+    expense_obj = ExpenseEntry(user_id=user_id, **expense.model_dump())
+    doc = expense_obj.model_dump()
+    await db.expense_entries.insert_one(doc)
+    return expense_obj
+
+@api_router.put("/expenses/{expense_id}", response_model=ExpenseEntry)
+async def update_expense(expense_id: str, expense: ExpenseEntryUpdate):
+    update_data = {k: v for k, v in expense.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.expense_entries.update_one(
+        {"id": expense_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Expense entry not found")
+    
+    updated_doc = await db.expense_entries.find_one({"id": expense_id}, {"_id": 0})
+    return ExpenseEntry(**updated_doc)
+
+@api_router.delete("/expenses/{expense_id}")
+async def delete_expense(expense_id: str):
+    result = await db.expense_entries.delete_one({"id": expense_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Expense entry not found")
+    return {"message": "Expense entry deleted successfully"}
+
+# ============ ANALYTICS ENDPOINTS ============
+
+@api_router.get("/analytics/dashboard")
+async def get_dashboard_analytics(month: Optional[str] = None):
+    query = {}
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    income_entries = await db.income_entries.find(query, {"_id": 0}).to_list(10000)
+    expense_entries = await db.expense_entries.find(query, {"_id": 0}).to_list(10000)
+    
+    total_income = sum(entry["amount"] for entry in income_entries)
+    total_expenses = sum(entry["amount"] for entry in expense_entries)
+    net_profit = total_income - total_expenses
+    
+    product_income = {}
+    for entry in income_entries:
+        product = entry["product_name"]
+        product_income[product] = product_income.get(product, 0) + entry["amount"]
+    
+    customer_income = {}
+    for entry in income_entries:
+        person = entry["person_name"]
+        customer_income[person] = customer_income.get(person, 0) + entry["amount"]
+    
+    category_expenses = {}
+    for entry in expense_entries:
+        category = entry["category_name"]
+        category_expenses[category] = category_expenses.get(category, 0) + entry["amount"]
+    
+    daily_income = {}
+    daily_expenses = {}
+    for entry in income_entries:
+        date = entry["date"]
+        daily_income[date] = daily_income.get(date, 0) + entry["amount"]
+    
+    for entry in expense_entries:
+        date = entry["date"]
+        daily_expenses[date] = daily_expenses.get(date, 0) + entry["amount"]
+    
+    all_dates = sorted(set(list(daily_income.keys()) + list(daily_expenses.keys())))
+    daily_data = []
+    for date in all_dates:
+        daily_data.append({
+            "date": date,
+            "income": daily_income.get(date, 0),
+            "expenses": daily_expenses.get(date, 0)
+        })
+    
+    top_customers = sorted(
+        [{"name": k, "amount": v} for k, v in customer_income.items()],
+        key=lambda x: x["amount"],
+        reverse=True
+    )[:5]
+    
+    product_data = [{"name": k, "value": v} for k, v in product_income.items()]
+    category_data = [{"name": k, "value": v} for k, v in category_expenses.items()]
+    
+    recent_income = sorted(income_entries, key=lambda x: x["created_at"], reverse=True)[:5]
+    recent_expenses = sorted(expense_entries, key=lambda x: x["created_at"], reverse=True)[:5]
+    
+    return {
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "net_profit": net_profit,
+        "income_count": len(income_entries),
+        "expense_count": len(expense_entries),
+        "daily_data": daily_data,
+        "product_data": product_data,
+        "category_data": category_data,
+        "top_customers": top_customers,
+        "recent_income": recent_income,
+        "recent_expenses": recent_expenses
+    }
+
+@api_router.get("/analytics/monthly")
+async def get_monthly_analytics(month: str):
+    query = {"date": {"$regex": f"^{month}"}}
+    
+    income_entries = await db.income_entries.find(query, {"_id": 0}).to_list(10000)
+    expense_entries = await db.expense_entries.find(query, {"_id": 0}).to_list(10000)
+    
+    total_income = sum(entry["amount"] for entry in income_entries)
+    total_expenses = sum(entry["amount"] for entry in expense_entries)
+    net_profit = total_income - total_expenses
+    
+    daily_breakdown = {}
+    for entry in income_entries:
+        date = entry["date"]
+        if date not in daily_breakdown:
+            daily_breakdown[date] = {"date": date, "income": 0, "expenses": 0, "profit": 0}
+        daily_breakdown[date]["income"] += entry["amount"]
+    
+    for entry in expense_entries:
+        date = entry["date"]
+        if date not in daily_breakdown:
+            daily_breakdown[date] = {"date": date, "income": 0, "expenses": 0, "profit": 0}
+        daily_breakdown[date]["expenses"] += entry["amount"]
+    
+    for date in daily_breakdown:
+        daily_breakdown[date]["profit"] = daily_breakdown[date]["income"] - daily_breakdown[date]["expenses"]
+    
+    daily_list = sorted(daily_breakdown.values(), key=lambda x: x["date"])
+    
+    best_earning_day = max(daily_list, key=lambda x: x["income"]) if daily_list else None
+    highest_expense_day = max(daily_list, key=lambda x: x["expenses"]) if daily_list else None
+    
+    product_income = {}
+    for entry in income_entries:
+        product = entry["product_name"]
+        product_income[product] = product_income.get(product, 0) + entry["amount"]
+    
+    top_product = max(product_income.items(), key=lambda x: x[1]) if product_income else None
+    
+    customer_income = {}
+    for entry in income_entries:
+        person = entry["person_name"]
+        customer_income[person] = customer_income.get(person, 0) + entry["amount"]
+    
+    top_customer = max(customer_income.items(), key=lambda x: x[1]) if customer_income else None
+    
+    category_expenses = {}
+    for entry in expense_entries:
+        category = entry["category_name"]
+        category_expenses[category] = category_expenses.get(category, 0) + entry["amount"]
+    
+    biggest_category = max(category_expenses.items(), key=lambda x: x[1]) if category_expenses else None
+    
+    savings_rate = (net_profit / total_income * 100) if total_income > 0 else 0
+    
+    return {
+        "month": month,
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "net_profit": net_profit,
+        "savings_rate": savings_rate,
+        "daily_breakdown": daily_list,
+        "best_earning_day": best_earning_day,
+        "highest_expense_day": highest_expense_day,
+        "top_product": {"name": top_product[0], "amount": top_product[1]} if top_product else None,
+        "top_customer": {"name": top_customer[0], "amount": top_customer[1]} if top_customer else None,
+        "biggest_category": {"name": biggest_category[0], "amount": biggest_category[1]} if biggest_category else None
+    }
+
+@api_router.get("/analytics/reports")
+async def get_reports(month: Optional[str] = None):
+    query = {}
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    income_entries = await db.income_entries.find(query, {"_id": 0}).to_list(10000)
+    expense_entries = await db.expense_entries.find(query, {"_id": 0}).to_list(10000)
+    
+    product_income = {}
+    for entry in income_entries:
+        product = entry["product_name"]
+        if product not in product_income:
+            product_income[product] = {"name": product, "amount": 0, "count": 0}
+        product_income[product]["amount"] += entry["amount"]
+        product_income[product]["count"] += 1
+    
+    person_income = {}
+    for entry in income_entries:
+        person = entry["person_name"]
+        if person not in person_income:
+            person_income[person] = {"name": person, "amount": 0, "count": 0}
+        person_income[person]["amount"] += entry["amount"]
+        person_income[person]["count"] += 1
+    
+    category_expenses = {}
+    for entry in expense_entries:
+        category = entry["category_name"]
+        if category not in category_expenses:
+            category_expenses[category] = {"name": category, "amount": 0, "count": 0}
+        category_expenses[category]["amount"] += entry["amount"]
+        category_expenses[category]["count"] += 1
+    
+    return {
+        "income_by_product": sorted(product_income.values(), key=lambda x: x["amount"], reverse=True),
+        "income_by_person": sorted(person_income.values(), key=lambda x: x["amount"], reverse=True),
+        "expenses_by_category": sorted(category_expenses.values(), key=lambda x: x["amount"], reverse=True)
+    }
+
+# ============ IMPORT/PARSE ENDPOINTS ============
+
+@api_router.post("/import/parse", response_model=List[ParsedEntry])
+async def parse_import(request: ImportRequest):
+    lines = request.raw_text.strip().split('\n')
+    parsed_entries = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        day_match = re.match(r'^(\d+)-\s*(.+)$', line)
+        if day_match:
+            day = day_match.group(1)
+            rest = day_match.group(2)
+        else:
+            day = ""
+            rest = line
+        
+        amount_match = re.match(r'^([\d.]+(?:k)?)\s+(.+)$', rest)
+        if not amount_match:
+            continue
+        
+        amount_str = amount_match.group(1)
+        description = amount_match.group(2)
+        
+        if amount_str.endswith('k'):
+            amount = float(amount_str[:-1]) * 1000
+        else:
+            amount = float(amount_str)
+        
+        person_match = re.search(r'\(([^)]+)\)', description)
+        if person_match:
+            person_name = person_match.group(1)
+            product_or_description = re.sub(r'\s*\([^)]+\)', '', description).strip()
+        else:
+            person_name = ""
+            product_or_description = description.strip()
+        
+        parsed_entries.append(ParsedEntry(
+            type=request.entry_type,
+            day=day,
+            amount=amount,
+            product_or_description=product_or_description,
+            person_name=person_name,
+            raw_text=line
+        ))
+    
+    return parsed_entries
+
+# ============ EXPORT ENDPOINTS ============
+
+@api_router.get("/export/income")
+async def export_income(month: Optional[str] = None):
+    query = {}
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    income_entries = await db.income_entries.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
+    
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["date", "day", "amount", "product_name", "person_name", "notes", "payment_status", "reference_number"])
+    writer.writeheader()
+    
+    for entry in income_entries:
+        writer.writerow({
+            "date": entry.get("date", ""),
+            "day": entry.get("day", ""),
+            "amount": entry.get("amount", 0),
+            "product_name": entry.get("product_name", ""),
+            "person_name": entry.get("person_name", ""),
+            "notes": entry.get("notes", ""),
+            "payment_status": entry.get("payment_status", ""),
+            "reference_number": entry.get("reference_number", "")
+        })
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=income_{month or 'all'}.csv"}
+    )
+
+@api_router.get("/export/expenses")
+async def export_expenses(month: Optional[str] = None):
+    query = {}
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    expense_entries = await db.expense_entries.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
+    
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["date", "day", "amount", "description", "category_name", "notes", "payment_method", "reference_number"])
+    writer.writeheader()
+    
+    for entry in expense_entries:
+        writer.writerow({
+            "date": entry.get("date", ""),
+            "day": entry.get("day", ""),
+            "amount": entry.get("amount", 0),
+            "description": entry.get("description", ""),
+            "category_name": entry.get("category_name", ""),
+            "notes": entry.get("notes", ""),
+            "payment_method": entry.get("payment_method", ""),
+            "reference_number": entry.get("reference_number", "")
+        })
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=expenses_{month or 'all'}.csv"}
+    )
+
+# ============ SUGGESTIONS ENDPOINTS ============
+
+@api_router.get("/suggestions/products")
+async def get_product_suggestions():
+    products = await db.products.find({"is_active": True}, {"_id": 0, "name": 1}).to_list(1000)
+    income_entries = await db.income_entries.find({}, {"_id": 0, "product_name": 1}).to_list(1000)
+    
+    product_names = set([p["name"] for p in products])
+    product_names.update([e["product_name"] for e in income_entries])
+    
+    return {"suggestions": sorted(list(product_names))}
+
+@api_router.get("/suggestions/persons")
+async def get_person_suggestions():
+    income_entries = await db.income_entries.find({}, {"_id": 0, "person_name": 1}).to_list(1000)
+    person_names = set([e["person_name"] for e in income_entries if e["person_name"]])
+    
+    return {"suggestions": sorted(list(person_names))}
+
+@api_router.get("/suggestions/categories")
+async def get_category_suggestions():
+    categories = await db.expense_categories.find({"is_active": True}, {"_id": 0, "name": 1}).to_list(1000)
+    expense_entries = await db.expense_entries.find({}, {"_id": 0, "category_name": 1}).to_list(1000)
+    
+    category_names = set([c["name"] for c in categories])
+    category_names.update([e["category_name"] for e in expense_entries])
+    
+    return {"suggestions": sorted(list(category_names))}
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -77,7 +701,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
