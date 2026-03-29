@@ -110,12 +110,21 @@ export const IncomePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.amount || formData.amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
     try {
+      console.log('Submitting income:', editingItem ? 'UPDATE' : 'CREATE', formData);
+      
       if (editingItem) {
-        await axios.put(`${API}/income/${editingItem.id}`, formData);
+        const response = await axios.put(`${API}/income/${editingItem.id}`, formData);
+        console.log('Update response:', response);
         toast.success('Income entry updated successfully');
       } else {
-        await axios.post(`${API}/income`, formData);
+        const response = await axios.post(`${API}/income`, formData);
+        console.log('Create response:', response);
         toast.success('Income entry added successfully');
       }
       
@@ -124,7 +133,9 @@ export const IncomePage = () => {
       fetchIncome();
       fetchSuggestions();
     } catch (error) {
-      toast.error('Failed to save income entry');
+      console.error('Submit error:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.detail || 'Failed to save income entry');
     }
   };
 
@@ -144,14 +155,23 @@ export const IncomePage = () => {
   };
 
   const handleDelete = async () => {
+    if (!itemToDelete || !itemToDelete.id) {
+      toast.error('Invalid item selected');
+      return;
+    }
+    
     try {
-      await axios.delete(`${API}/income/${itemToDelete.id}`);
+      console.log('Deleting income entry:', itemToDelete.id);
+      const response = await axios.delete(`${API}/income/${itemToDelete.id}`);
+      console.log('Delete response:', response);
       toast.success('Income entry deleted successfully');
       setDeleteDialogOpen(false);
       setItemToDelete(null);
       fetchIncome();
     } catch (error) {
-      toast.error('Failed to delete income entry');
+      console.error('Delete error:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.detail || 'Failed to delete income entry');
     }
   };
 

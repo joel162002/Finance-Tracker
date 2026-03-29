@@ -97,12 +97,21 @@ export const ExpensesPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.amount || formData.amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
     try {
+      console.log('Submitting expense:', editingItem ? 'UPDATE' : 'CREATE', formData);
+      
       if (editingItem) {
-        await axios.put(`${API}/expenses/${editingItem.id}`, formData);
+        const response = await axios.put(`${API}/expenses/${editingItem.id}`, formData);
+        console.log('Update response:', response);
         toast.success('Expense entry updated successfully');
       } else {
-        await axios.post(`${API}/expenses`, formData);
+        const response = await axios.post(`${API}/expenses`, formData);
+        console.log('Create response:', response);
         toast.success('Expense entry added successfully');
       }
       
@@ -110,7 +119,9 @@ export const ExpensesPage = () => {
       resetForm();
       fetchExpenses();
     } catch (error) {
-      toast.error('Failed to save expense entry');
+      console.error('Submit error:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.detail || 'Failed to save expense entry');
     }
   };
 
@@ -130,14 +141,23 @@ export const ExpensesPage = () => {
   };
 
   const handleDelete = async () => {
+    if (!itemToDelete || !itemToDelete.id) {
+      toast.error('Invalid item selected');
+      return;
+    }
+    
     try {
-      await axios.delete(`${API}/expenses/${itemToDelete.id}`);
+      console.log('Deleting expense entry:', itemToDelete.id);
+      const response = await axios.delete(`${API}/expenses/${itemToDelete.id}`);
+      console.log('Delete response:', response);
       toast.success('Expense entry deleted successfully');
       setDeleteDialogOpen(false);
       setItemToDelete(null);
       fetchExpenses();
     } catch (error) {
-      toast.error('Failed to delete expense entry');
+      console.error('Delete error:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.detail || 'Failed to delete expense entry');
     }
   };
 
