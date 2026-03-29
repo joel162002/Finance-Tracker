@@ -25,6 +25,8 @@ import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { getDayName } from '../utils/date';
 
+import { BackupRestore } from '../components/BackupRestore';
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
@@ -237,6 +239,7 @@ export const SettingsPage = () => {
           <TabsTrigger value="products" data-testid="products-tab">Products</TabsTrigger>
           <TabsTrigger value="categories" data-testid="categories-tab">Expense Categories</TabsTrigger>
           <TabsTrigger value="import" data-testid="import-tab">Import Data</TabsTrigger>
+          <TabsTrigger value="backup" data-testid="backup-tab">Backup & Restore</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -488,6 +491,10 @@ export const SettingsPage = () => {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="backup">
+          <BackupRestore />
         </TabsContent>
       </Tabs>
 
