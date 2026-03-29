@@ -293,21 +293,32 @@ export const ExpensesPage = () => {
 
               <div>
                 <Label htmlFor="category_name">Category</Label>
+                {categories.length > 0 && (
+                  <Select
+                    value={formData.category_name}
+                    onValueChange={(value) => setFormData({ ...formData, category_name: value })}
+                  >
+                    <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="expense-category-select">
+                      <SelectValue placeholder="Select from existing categories" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-slate-500 mt-1">Or type a new category below</p>
                 <Input
                   id="category_name"
-                  list="categories"
                   value={formData.category_name}
                   onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
-                  placeholder="Select or type category"
-                  className="rounded-xl bg-slate-50"
+                  placeholder="Type category name"
+                  className="rounded-xl bg-slate-50 mt-2"
                   data-testid="expense-category-input"
-                  required
                 />
-                <datalist id="categories">
-                  {categories.map((category) => (
-                    <option key={category} value={category} />
-                  ))}
-                </datalist>
               </div>
 
               <div>

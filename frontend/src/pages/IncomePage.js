@@ -296,40 +296,58 @@ export const IncomePage = () => {
 
               <div>
                 <Label htmlFor="product_name">Product</Label>
+                <Select
+                  value={formData.product_name}
+                  onValueChange={(value) => setFormData({ ...formData, product_name: value })}
+                >
+                  <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-product-select">
+                    <SelectValue placeholder="Select or type product name" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {suggestions.products.map((product) => (
+                      <SelectItem key={product} value={product}>
+                        {product}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 mt-1">Or type a new product name below</p>
                 <Input
-                  id="product_name"
-                  list="products"
                   value={formData.product_name}
                   onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
-                  placeholder="Select or type product name"
-                  className="rounded-xl bg-slate-50"
-                  data-testid="income-product-input"
-                  required
+                  placeholder="Type custom product name"
+                  className="rounded-xl bg-slate-50 mt-2"
                 />
-                <datalist id="products">
-                  {suggestions.products.map((product) => (
-                    <option key={product} value={product} />
-                  ))}
-                </datalist>
               </div>
 
               <div>
                 <Label htmlFor="person_name">Customer / Person</Label>
+                {suggestions.persons.length > 0 && (
+                  <Select
+                    value={formData.person_name}
+                    onValueChange={(value) => setFormData({ ...formData, person_name: value })}
+                  >
+                    <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-person-select">
+                      <SelectValue placeholder="Select from existing customers" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {suggestions.persons.map((person) => (
+                        <SelectItem key={person} value={person}>
+                          {person}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-slate-500 mt-1">Or type a new customer name below</p>
                 <Input
                   id="person_name"
-                  list="persons"
                   value={formData.person_name}
                   onChange={(e) => setFormData({ ...formData, person_name: e.target.value })}
-                  placeholder="Customer name"
-                  className="rounded-xl bg-slate-50"
+                  placeholder="Type customer name"
+                  className="rounded-xl bg-slate-50 mt-2"
                   data-testid="income-person-input"
-                  required
                 />
-                <datalist id="persons">
-                  {suggestions.persons.map((person) => (
-                    <option key={person} value={person} />
-                  ))}
-                </datalist>
               </div>
 
               <div>

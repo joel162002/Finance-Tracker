@@ -21,7 +21,7 @@ Your Income & Expense Tracker can now be installed on your mobile device and use
 ### **For Android (Chrome/Samsung Internet)**
 
 1. Open your browser and go to your app URL:  
-   `https://transaction-ledger-13.preview.emergentagent.com`
+   `https://expense-dash-45.preview.emergentagent.com`
 
 2. Log in with your credentials:
    - Email: `demo@finance.com`
@@ -39,7 +39,7 @@ Your Income & Expense Tracker can now be installed on your mobile device and use
 ### **For iPhone/iPad (Safari)**
 
 1. Open **Safari** and go to your app URL:  
-   `https://transaction-ledger-13.preview.emergentagent.com`
+   `https://expense-dash-45.preview.emergentagent.com`
 
 2. Log in with your credentials
 
