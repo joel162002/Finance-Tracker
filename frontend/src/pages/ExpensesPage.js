@@ -40,6 +40,7 @@ const API = `${BACKEND_URL}/api`;
 export const ExpensesPage = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -105,27 +106,30 @@ export const ExpensesPage = () => {
     }
     
     try {
+      setSaving(true);
       console.log('Submitting expense:', editingItem ? 'UPDATE' : 'CREATE', formData);
       
       if (editingItem) {
         const response = await axios.put(`${API}/expenses/${editingItem.id}`, formData);
         console.log('Update response:', response);
-        toast.success('Expense entry updated successfully');
       } else {
         const response = await axios.post(`${API}/expenses`, formData);
         console.log('Create response:', response);
-        toast.success('Expense entry added successfully');
       }
+      
+      // Await the fetch to ensure data is refreshed before closing dialog
+      await fetchExpenses(false);
+      triggerRefresh(); // Notify other components (Dashboard) to refresh
       
       setDialogOpen(false);
       resetForm();
-      // Await the fetch to ensure data is refreshed before continuing (no loading spinner)
-      await fetchExpenses(false);
-      triggerRefresh(); // Notify other components (Dashboard) to refresh
+      toast.success(editingItem ? 'Expense entry updated successfully' : 'Expense entry added successfully');
     } catch (error) {
       console.error('Submit error:', error);
       console.error('Error response:', error.response);
       toast.error(error.response?.data?.detail || 'Failed to save expense entry');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -382,10 +386,11 @@ export const ExpensesPage = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-red-600 text-white hover:bg-red-700 rounded-xl"
+                  disabled={saving}
+                  className="bg-red-600 text-white hover:bg-red-700 rounded-xl disabled:opacity-70"
                   data-testid="expense-submit-button"
                 >
-                  {editingItem ? 'Update' : 'Add'} Expense
+                  {saving ? 'Saving...' : (editingItem ? 'Update' : 'Add')} {!saving && 'Expense'}
                 </Button>
               </DialogFooter>
             </form>

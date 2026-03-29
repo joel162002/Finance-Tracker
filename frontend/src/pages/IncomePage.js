@@ -40,6 +40,7 @@ const API = `${BACKEND_URL}/api`;
 export const IncomePage = () => {
   const [income, setIncome] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -118,28 +119,31 @@ export const IncomePage = () => {
     }
     
     try {
+      setSaving(true);
       console.log('Submitting income:', editingItem ? 'UPDATE' : 'CREATE', formData);
       
       if (editingItem) {
         const response = await axios.put(`${API}/income/${editingItem.id}`, formData);
         console.log('Update response:', response);
-        toast.success('Income entry updated successfully');
       } else {
         const response = await axios.post(`${API}/income`, formData);
         console.log('Create response:', response);
-        toast.success('Income entry added successfully');
       }
       
-      setDialogOpen(false);
-      resetForm();
-      // Await the fetch to ensure data is refreshed before continuing (no loading spinner)
+      // Await the fetch to ensure data is refreshed before closing dialog
       await fetchIncome(false);
       await fetchSuggestions();
       triggerRefresh(); // Notify other components (Dashboard) to refresh
+      
+      setDialogOpen(false);
+      resetForm();
+      toast.success(editingItem ? 'Income entry updated successfully' : 'Income entry added successfully');
     } catch (error) {
       console.error('Submit error:', error);
       console.error('Error response:', error.response);
       toast.error(error.response?.data?.detail || 'Failed to save income entry');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -404,15 +408,17 @@ export const IncomePage = () => {
                     resetForm();
                   }}
                   className="rounded-xl"
+                  disabled={saving}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl"
+                  disabled={saving}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl disabled:opacity-70"
                   data-testid="income-submit-button"
                 >
-                  {editingItem ? 'Update' : 'Add'} Income
+                  {saving ? 'Saving...' : (editingItem ? 'Update' : 'Add')} {!saving && 'Income'}
                 </Button>
               </DialogFooter>
             </form>
