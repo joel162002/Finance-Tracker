@@ -245,9 +245,9 @@ export const SettingsPage = () => {
         </div>
 
         <TabsContent value="products">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-medium text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h3 className="text-lg sm:text-xl font-medium text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Manage Products
               </h3>
               <Button
@@ -256,7 +256,7 @@ export const SettingsPage = () => {
                   setProductForm({ name: '', description: '' });
                   setProductDialogOpen(true);
                 }}
-                className="bg-slate-900 text-white hover:bg-slate-800 rounded-xl"
+                className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-sm"
                 data-testid="add-product-button"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -266,14 +266,14 @@ export const SettingsPage = () => {
 
             <div className="space-y-3">
               {products.map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors" data-testid="product-item">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{product.name}</p>
+                <div key={product.id} className="flex items-center justify-between p-3 sm:p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors" data-testid="product-item">
+                  <div className="flex-1 min-w-0 mr-3">
+                    <p className="text-sm font-medium text-slate-900 truncate">{product.name}</p>
                     {product.description && (
-                      <p className="text-xs text-slate-500">{product.description}</p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{product.description}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                     <Button
                       onClick={() => {
                         setEditingProduct(product);
@@ -282,7 +282,7 @@ export const SettingsPage = () => {
                       }}
                       variant="ghost"
                       size="sm"
-                      className="text-slate-600"
+                      className="text-slate-600 h-8 w-8 p-0"
                       data-testid="edit-product-button"
                     >
                       <Edit className="w-4 h-4" />
@@ -295,7 +295,7 @@ export const SettingsPage = () => {
                       }}
                       variant="ghost"
                       size="sm"
-                      className="text-red-600"
+                      className="text-red-600 h-8 w-8 p-0"
                       data-testid="delete-product-button"
                     >
                       <Trash2 className="w-4 h-4" />
