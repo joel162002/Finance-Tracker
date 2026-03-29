@@ -157,9 +157,17 @@ async def login(request: LoginRequest):
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Check password (simple comparison for demo purposes)
+    stored_password = user_doc.get("password", "")
+    if stored_password != request.password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Remove password from response
+    user_response = {k: v for k, v in user_doc.items() if k != "password"}
+    
     return LoginResponse(
-        token="demo-token-" + user_doc["id"],
-        user=user_doc
+        token="token-" + user_doc["id"],
+        user=user_response
     )
 
 @api_router.post("/auth/logout")

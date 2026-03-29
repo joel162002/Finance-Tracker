@@ -23,14 +23,27 @@ async def seed_database():
     await db.income_entries.delete_many({})
     await db.expense_entries.delete_many({})
     
+    # Create main user account
+    main_user = {
+        "id": "joel-user",
+        "email": "joeljalapitjr@gmail.com",
+        "password": "joelpogi",
+        "name": "Joel Jalapit Jr",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(main_user)
+    print("Created main user: joeljalapitjr@gmail.com")
+    
+    # Create demo user as backup
     demo_user = {
         "id": "demo-user",
         "email": "demo@finance.com",
+        "password": "demo123",
         "name": "Demo User",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(demo_user)
-    print("Created demo user")
+    print("Created demo user: demo@finance.com")
     
     default_products = [
         "Motionarray",

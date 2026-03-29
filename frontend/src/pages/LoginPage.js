@@ -12,8 +12,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState('demo@finance.com');
-  const [password, setPassword] = useState('demo123');
+  const [email, setEmail] = useState('joeljalapitjr@gmail.com');
+  const [password, setPassword] = useState('joelpogi');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -102,9 +102,9 @@ export const LoginPage = () => {
         </form>
 
         <div className="mt-6 p-4 bg-slate-50/50 rounded-xl">
-          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-slate-400 mb-2">Demo Credentials</p>
-          <p className="text-sm text-slate-600">Email: demo@finance.com</p>
-          <p className="text-sm text-slate-600">Password: demo123</p>
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-slate-400 mb-2">Your Account</p>
+          <p className="text-sm text-slate-600">Email: joeljalapitjr@gmail.com</p>
+          <p className="text-sm text-slate-600">Password: joelpogi</p>
         </div>
       </div>
     </div>
