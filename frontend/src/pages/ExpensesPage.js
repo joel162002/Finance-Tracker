@@ -70,9 +70,9 @@ export const ExpensesPage = () => {
     fetchCategories();
   }, [filters]);
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const params = {};
       if (filters.month) params.month = filters.month;
       if (filters.search) params.search = filters.search;
@@ -83,7 +83,7 @@ export const ExpensesPage = () => {
     } catch (error) {
       toast.error('Failed to fetch expense data');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -119,7 +119,8 @@ export const ExpensesPage = () => {
       
       setDialogOpen(false);
       resetForm();
-      fetchExpenses();
+      // Await the fetch to ensure data is refreshed before continuing (no loading spinner)
+      await fetchExpenses(false);
       triggerRefresh(); // Notify other components (Dashboard) to refresh
     } catch (error) {
       console.error('Submit error:', error);
