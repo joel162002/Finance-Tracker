@@ -364,6 +364,25 @@ async def delete_expense(expense_id: str):
         raise HTTPException(status_code=404, detail="Expense entry not found")
     return {"message": "Expense entry deleted successfully"}
 
+# ============ BULK DATA OPERATIONS ============
+
+@api_router.delete("/data/clear-all")
+async def clear_all_data():
+    """Clear all income and expense entries from the database"""
+    try:
+        income_result = await db.income_entries.delete_many({})
+        expense_result = await db.expense_entries.delete_many({})
+        
+        return {
+            "message": "All data cleared successfully",
+            "deleted": {
+                "income_entries": income_result.deleted_count,
+                "expense_entries": expense_result.deleted_count
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
+
 # ============ ANALYTICS ENDPOINTS ============
 
 @api_router.get("/analytics/dashboard")

@@ -145,22 +145,11 @@ export const BackupRestore = () => {
 
   const handleClearAllData = async () => {
     try {
-      const [incomeRes, expenseRes] = await Promise.all([
-        axios.get(`${API}/income`),
-        axios.get(`${API}/expenses`)
-      ]);
-
-      // Delete all income
-      for (const entry of incomeRes.data) {
-        await axios.delete(`${API}/income/${entry.id}`);
-      }
-
-      // Delete all expenses
-      for (const entry of expenseRes.data) {
-        await axios.delete(`${API}/expenses/${entry.id}`);
-      }
-
-      toast.success('All data cleared successfully');
+      // Use bulk delete endpoint for efficiency and reliability
+      const response = await axios.delete(`${API}/data/clear-all`);
+      
+      const { deleted } = response.data;
+      toast.success(`Cleared ${deleted.income_entries} income and ${deleted.expense_entries} expense entries`);
       setClearDialogOpen(false);
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
