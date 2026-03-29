@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, getCurrentMonth } from '../utils/date';
@@ -26,6 +26,7 @@ import {
   Legend
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { useDataRefresh } from '../context/DataContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -36,29 +37,77 @@ const COLORS = ['#1E3A8A', '#059669', '#D97706', '#DC2626', '#6366F1', '#8B5CF6'
 
 export const DashboardPage = () => {
   const [analytics, setAnalytics] = useState(null);
+  const [quickSummary, setQuickSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const navigate = useNavigate();
+  const { refreshTrigger } = useDataRefresh();
 
-  useEffect(() => {
-    fetchAnalytics();
+  // Fast initial load with quick summary
+  const fetchQuickSummary = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/quick-summary`, {
+        params: { month: selectedMonth }
+      });
+      setQuickSummary(response.data);
+    } catch (error) {
+      console.error('Error fetching quick summary:', error);
+    }
   }, [selectedMonth]);
 
-  const fetchAnalytics = async () => {
+  // Full analytics load (for charts and detailed data)
+  const fetchAnalytics = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await axios.get(`${API}/analytics/dashboard`, {
         params: { month: selectedMonth }
       });
       setAnalytics(response.data);
+      // Update quick summary with full data
+      setQuickSummary({
+        total_income: response.data.total_income,
+        total_expenses: response.data.total_expenses,
+        net_profit: response.data.net_profit,
+        income_count: response.data.income_count,
+        expense_count: response.data.expense_count
+      });
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMonth]);
 
-  if (loading) {
+  // Initial load: fetch quick summary first, then full analytics
+  useEffect(() => {
+    setLoading(true);
+    fetchQuickSummary();
+    fetchAnalytics();
+  }, [selectedMonth, fetchQuickSummary, fetchAnalytics]);
+
+  // Auto-refresh when data changes (from other pages)
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchQuickSummary();
+      fetchAnalytics();
+    }
+  }, [refreshTrigger, fetchQuickSummary, fetchAnalytics]);
+
+  // Use quick summary data if full analytics not loaded yet
+  const displayData = analytics || (quickSummary ? {
+    total_income: quickSummary.total_income,
+    total_expenses: quickSummary.total_expenses,
+    net_profit: quickSummary.net_profit,
+    income_count: quickSummary.income_count,
+    expense_count: quickSummary.expense_count,
+    daily_data: [],
+    top_customers: [],
+    product_data: [],
+    category_data: [],
+    recent_income: [],
+    recent_expenses: []
+  } : null);
+
+  if (loading && !quickSummary) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -72,28 +121,28 @@ export const DashboardPage = () => {
   const summaryCards = [
     {
       title: 'Total Income',
-      value: analytics?.total_income || 0,
+      value: displayData?.total_income || 0,
       icon: TrendingUp,
       color: 'emerald',
       testId: 'total-income-card'
     },
     {
       title: 'Total Expenses',
-      value: analytics?.total_expenses || 0,
+      value: displayData?.total_expenses || 0,
       icon: TrendingDown,
       color: 'red',
       testId: 'total-expenses-card'
     },
     {
       title: 'Net Profit',
-      value: analytics?.net_profit || 0,
+      value: displayData?.net_profit || 0,
       icon: DollarSign,
-      color: (analytics?.net_profit || 0) >= 0 ? 'blue' : 'red',
+      color: (displayData?.net_profit || 0) >= 0 ? 'blue' : 'red',
       testId: 'net-profit-card'
     },
     {
       title: 'Transactions',
-      value: `${analytics?.income_count || 0} / ${analytics?.expense_count || 0}`,
+      value: `${displayData?.income_count || 0} / ${displayData?.expense_count || 0}`,
       icon: FileText,
       color: 'slate',
       isCount: true,

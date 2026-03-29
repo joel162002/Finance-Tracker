@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search, Filter, Download } from 'lucide-react';
+import { useDataRefresh } from '../context/DataContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -43,6 +44,7 @@ export const IncomePage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const { triggerRefresh } = useDataRefresh();
   
   const [filters, setFilters] = useState({
     month: getCurrentMonth(),
@@ -132,6 +134,7 @@ export const IncomePage = () => {
       resetForm();
       fetchIncome();
       fetchSuggestions();
+      triggerRefresh(); // Notify other components (Dashboard) to refresh
     } catch (error) {
       console.error('Submit error:', error);
       console.error('Error response:', error.response);
@@ -168,6 +171,7 @@ export const IncomePage = () => {
       setDeleteDialogOpen(false);
       setItemToDelete(null);
       fetchIncome();
+      triggerRefresh(); // Notify other components (Dashboard) to refresh
     } catch (error) {
       console.error('Delete error:', error);
       console.error('Error response:', error.response);

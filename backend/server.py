@@ -710,7 +710,57 @@ async def get_category_suggestions():
     
     return {"suggestions": sorted(list(category_names))}
 
+@api_router.get("/analytics/quick-summary")
+async def get_quick_summary(month: Optional[str] = None):
+    """Fast endpoint for quick totals - optimized for speed"""
+    query = {}
+    if month:
+        query["date"] = {"$regex": f"^{month}"}
+    
+    # Use aggregation for faster sum calculation
+    income_pipeline = [
+        {"$match": query},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]
+    expense_pipeline = [
+        {"$match": query},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]
+    
+    income_result = await db.income_entries.aggregate(income_pipeline).to_list(1)
+    expense_result = await db.expense_entries.aggregate(expense_pipeline).to_list(1)
+    
+    total_income = income_result[0]["total"] if income_result else 0
+    total_expenses = expense_result[0]["total"] if expense_result else 0
+    income_count = income_result[0]["count"] if income_result else 0
+    expense_count = expense_result[0]["count"] if expense_result else 0
+    
+    return {
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "net_profit": total_income - total_expenses,
+        "income_count": income_count,
+        "expense_count": expense_count
+    }
+
 app.include_router(api_router)
+
+@app.on_event("startup")
+async def create_indexes():
+    """Create database indexes for faster queries"""
+    try:
+        # Index on date field for faster filtering
+        await db.income_entries.create_index("date")
+        await db.expense_entries.create_index("date")
+        # Index on created_at for faster sorting
+        await db.income_entries.create_index("created_at")
+        await db.expense_entries.create_index("created_at")
+        # Compound index for common queries
+        await db.income_entries.create_index([("date", 1), ("created_at", -1)])
+        await db.expense_entries.create_index([("date", 1), ("created_at", -1)])
+        logger.info("Database indexes created successfully")
+    except Exception as e:
+        logger.error(f"Error creating indexes: {e}")
 
 app.add_middleware(
     CORSMiddleware,

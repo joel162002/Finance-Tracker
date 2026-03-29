@@ -1,6 +1,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider } from './context/DataContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IncomePage } from './pages/IncomePage';
@@ -132,11 +133,13 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-        <InstallPrompt />
-        <Toaster position="top-right" />
-      </BrowserRouter>
+      <DataProvider>
+        <BrowserRouter>
+          <AppRoutes />
+          <InstallPrompt />
+          <Toaster position="top-right" />
+        </BrowserRouter>
+      </DataProvider>
     </AuthProvider>
   );
 }
