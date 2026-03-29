@@ -226,21 +226,23 @@ export const SettingsPage = () => {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
           Settings
         </h1>
-        <p className="mt-2 text-base leading-relaxed text-slate-600">
+        <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
           Manage your products, categories, and import data
         </p>
       </div>
 
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="bg-white border border-slate-200">
-          <TabsTrigger value="products" data-testid="products-tab">Products</TabsTrigger>
-          <TabsTrigger value="categories" data-testid="categories-tab">Expense Categories</TabsTrigger>
-          <TabsTrigger value="import" data-testid="import-tab">Import Data</TabsTrigger>
-          <TabsTrigger value="backup" data-testid="backup-tab">Backup & Restore</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="bg-white border border-slate-200 inline-flex min-w-full sm:min-w-0">
+            <TabsTrigger value="products" data-testid="products-tab" className="text-xs sm:text-sm whitespace-nowrap">Products</TabsTrigger>
+            <TabsTrigger value="categories" data-testid="categories-tab" className="text-xs sm:text-sm whitespace-nowrap">Categories</TabsTrigger>
+            <TabsTrigger value="import" data-testid="import-tab" className="text-xs sm:text-sm whitespace-nowrap">Import</TabsTrigger>
+            <TabsTrigger value="backup" data-testid="backup-tab" className="text-xs sm:text-sm whitespace-nowrap">Backup</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="products">
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200">
