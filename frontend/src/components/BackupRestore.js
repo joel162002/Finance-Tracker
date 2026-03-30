@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Download, Upload, Database, Trash2 } from 'lucide-react';
+import { Download, Upload, Database, Trash2, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import {
   AlertDialog,
@@ -19,10 +19,49 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Utility to clear all browser caches and force refresh
+const clearBrowserCache = async () => {
+  try {
+    // Clear service worker cache
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration.active) {
+        registration.active.postMessage({ type: 'CLEAR_CACHE' });
+      }
+    }
+    
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+    return false;
+  }
+};
+
 export const BackupRestore = () => {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleClearCacheAndRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await clearBrowserCache();
+      toast.success('Cache cleared! Refreshing page...');
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 1000);
+    } catch (error) {
+      toast.error('Failed to clear cache');
+      setRefreshing(false);
+    }
+  };
 
   const handleExportBackup = async () => {
     try {
@@ -214,6 +253,29 @@ export const BackupRestore = () => {
                 </Button>
               </Label>
             </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 border-amber-200 bg-amber-50/50">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <RefreshCw className="w-6 h-6 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-amber-900 mb-1">Sync & Refresh</h3>
+            <p className="text-sm text-amber-700 mb-4">
+              Clear browser cache and reload fresh data from server. Use this if data seems out of sync.
+            </p>
+            <Button
+              onClick={handleClearCacheAndRefresh}
+              disabled={refreshing}
+              className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl"
+              data-testid="clear-cache-button"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Clear Cache & Refresh'}
+            </Button>
           </div>
         </div>
       </Card>

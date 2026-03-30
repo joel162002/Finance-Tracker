@@ -1,7 +1,8 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -23,6 +24,17 @@ db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# Middleware to prevent browser caching of API responses
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Add no-cache headers to all API responses
+        if request.url.path.startswith('/api'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
 
 # ============ MODELS ============
 
@@ -752,6 +764,9 @@ async def get_quick_summary(month: Optional[str] = None):
     }
 
 app.include_router(api_router)
+
+# Add NoCacheMiddleware BEFORE CORS middleware
+app.add_middleware(NoCacheMiddleware)
 
 @app.on_event("startup")
 async def create_indexes():
