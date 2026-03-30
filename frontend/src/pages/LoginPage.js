@@ -48,8 +48,13 @@ export const LoginPage = () => {
       }}
     >
       <div className="w-full max-w-md backdrop-blur-xl bg-white/60 rounded-2xl p-8 sm:p-10 shadow-[0_8px_30px_-4px_rgba(15,23,42,0.1)] border border-white/20">
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="mb-8 text-center">
+          <img 
+            src="/logo.png" 
+            alt="JF Finance Tracker" 
+            className="w-32 h-32 mx-auto mb-4"
+          />
+          <h1 className="text-3xl sm:text-4xl tracking-tight font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Welcome Back
           </h1>
           <p className="mt-2 text-base leading-relaxed text-slate-600">Sign in to manage your finances</p>
