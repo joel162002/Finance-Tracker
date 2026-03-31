@@ -1,13 +1,14 @@
-# Income & Expense Tracker - Product Requirements Document
+# KitaTracker - Product Requirements Document
 
 ## Original Problem Statement
-Build a clean, modern, mobile-friendly web application for personal business finance tracking (Income & Expense Tracker). Core features include Dashboard (summary cards, charts), Income/Expense CRUD, Monthly Summaries, Reports, Settings, and a "Smart paste-to-import" tool to convert raw text logs into structured entries.
+Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard (summary cards, charts), Income/Expense CRUD, Monthly Summaries, Reports, Settings, a "Smart paste-to-import" tool, Progressive Web App (PWA) offline support, and a Premium Authentication UI.
 
 ## Tech Stack
 - **Frontend**: React, Tailwind CSS, Shadcn UI, Recharts
 - **Backend**: FastAPI, Motor (Async MongoDB)
 - **Database**: MongoDB
 - **PWA**: Service Worker + Manifest for offline capability
+- **Authentication**: JWT tokens, Google OAuth via Emergent Integrations
 
 ## Core Features Implemented
 
@@ -16,6 +17,7 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 - Interactive charts (pie charts, bar charts) using Recharts
 - Mobile-optimized layout with responsive chart legends
 - Auto-refresh when data changes via DataContext
+- **User Data Isolation**: Each user sees only their own data
 
 ### Income Management
 - Full CRUD operations (Create, Read, Update, Delete)
@@ -60,49 +62,117 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 - Installable as mobile app
 - Manifest for app appearance
 
-## Authentication
-- Password-verified login
-- Main account: joeljalapitjr@gmail.com / joelpogi
-- Demo account: demo@finance.com / demo123
+## Authentication System (March 31, 2026)
+
+### Premium Auth UI
+- Animated glassmorphism design
+- Landing page with Google and Email login options
+- Sign in / Sign up / Forgot password flows
+- Google OAuth via Emergent Integrations
+- JWT token-based authentication
+
+### User Data Isolation (FIXED - March 31, 2026)
+- All CRUD endpoints require authentication
+- MongoDB queries filter by user_id
+- New users see empty dashboard (₱0.00)
+- Each user's data is completely isolated
+- Centralized API utility adds Authorization header automatically
+
+### Security
+- Unauthenticated requests return 401
+- Password reset with 6-digit code (15-minute expiry)
+- Session management with logout
 
 ## Database Schema
-- `users`: {id, email, password, name, created_at}
+- `users`: {id, user_id, email, password, name, username, created_at}
 - `products`: {name, description}
 - `expense_categories`: {name, description}
-- `income_entries`: {date, day, amount, product_name, person_name, payment_status, notes}
-- `expense_entries`: {date, day, amount, description, category_name, payment_method, notes}
+- `income_entries`: {date, day, amount, product_name, person_name, payment_status, notes, **user_id**}
+- `expense_entries`: {date, day, amount, description, category_name, payment_method, notes, **user_id**}
+- `user_sessions`: {user_id, session_token, expires_at}
+- `password_resets`: {email, reset_code, expires_at}
 
 ## API Endpoints
-- GET/POST/PUT/DELETE `/api/income`
-- GET/POST/PUT/DELETE `/api/expenses`
-- GET/POST/PUT/DELETE `/api/products`
-- GET/POST/PUT/DELETE `/api/categories`
-- GET `/api/dashboard/summary`
-- GET `/api/analytics/dashboard`
-- GET `/api/analytics/quick-summary`
-- DELETE `/api/data/clear-all`
-- POST `/api/auth/login`
+- `POST /api/auth/login` - Login
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with code
+- `POST /api/auth/google/callback` - Google OAuth callback
+- `GET/POST/PUT/DELETE /api/income` - Income CRUD (requires auth)
+- `GET/POST/PUT/DELETE /api/expenses` - Expenses CRUD (requires auth)
+- `GET/POST/PUT/DELETE /api/products` - Products CRUD
+- `GET/POST/PUT/DELETE /api/categories` - Categories CRUD
+- `GET /api/analytics/dashboard` - Dashboard analytics (requires auth)
+- `GET /api/analytics/monthly` - Monthly analytics (requires auth)
+- `GET /api/analytics/reports` - Reports data (requires auth)
+- `GET /api/analytics/quick-summary` - Quick totals (requires auth)
+- `GET /api/suggestions/*` - Autocomplete suggestions (requires auth)
+- `GET /api/export/income` - Export income CSV (requires auth)
+- `GET /api/export/expenses` - Export expenses CSV (requires auth)
+- `DELETE /api/data/clear-all` - Clear user's data (requires auth)
 
-## Recent Updates (March 30, 2026)
+## Recent Updates (March 31, 2026)
 
-### Data Sync Bug Fix (CRITICAL)
-- **Root Cause**: Service worker was caching API responses, causing each browser to show different data
-- **Fix**: Service worker now excludes `/api/*` from caching
-- **Fix**: Added `Cache-Control: no-store` headers to all API responses
-- **Fix**: Added "Sync & Refresh" button to manually clear browser cache
+### P0 Bug Fixes
+1. **User Data Isolation (FIXED)**
+   - Added `require_auth` dependency to all CRUD/analytics endpoints
+   - All MongoDB queries filter by authenticated user_id
+   - New users see empty dashboard
+   - Test confirmed: 16/16 backend tests passed
 
-### Other Fixes
+2. **Keyboard Bug on Auth Screens (FIXED)**
+   - Input components use memo() to prevent re-renders
+   - Handlers use useCallback() for stable references
+   - Tested on mobile viewport (390x844)
+
+### Earlier Fixes
+- Data sync bug: Service worker now excludes `/api/*` from caching
+- Added `Cache-Control: no-store` headers to all API responses
 - Added password verification to login
 - Created user account system
-- Improved data loading with "Saving..." states
 - Database indexes for faster queries
-
-## Future/Backlog Tasks (P2/P3)
-1. Recurring income/expense tracking (P2)
-2. Monthly budget limits with alerts (P2)
-3. Multi-currency support (P3)
-4. Data visualization enhancements
 
 ## Test Credentials
 - Main: joeljalapitjr@gmail.com / joelpogi
 - Demo: demo@finance.com / demo123
+
+## Future/Backlog Tasks (P2/P3)
+1. Recurring income/expense tracking (P2)
+2. Monthly budget limits with alerts (P2)
+3. Email verification (P2)
+4. Multi-currency support (P3)
+5. Data visualization enhancements (P3)
+
+## Code Architecture
+```
+/app/
+├── backend/
+│   ├── server.py              # FastAPI app, MongoDB, Auth & CRUD routes
+│   ├── tests/                 # Pytest tests for user data isolation
+│   ├── requirements.txt
+│   └── .env                   # MONGO_URL, DB_NAME
+├── frontend/
+│   ├── public/
+│   │   ├── manifest.json      # PWA config (KitaTracker)
+│   │   ├── service-worker.js  # PWA offline cache (API excluded)
+│   │   └── logo...            # KitaTracker logos
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ui/            # Shadcn UI components
+│   │   │   ├── Layout.js
+│   │   │   └── BackupRestore.js
+│   │   ├── pages/
+│   │   │   ├── DashboardPage.js
+│   │   │   ├── IncomePage.js
+│   │   │   ├── ExpensesPage.js
+│   │   │   ├── LoginPage.js   # Premium Auth UI (memo/useCallback)
+│   │   │   └── AuthCallback.js
+│   │   ├── context/
+│   │   │   ├── AuthContext.js
+│   │   │   └── DataContext.js
+│   │   ├── utils/
+│   │   │   └── api.js         # Centralized axios with auth interceptor
+│   │   └── App.js
+│   └── package.json
+└── test_reports/
+```
