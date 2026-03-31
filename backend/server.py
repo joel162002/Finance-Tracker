@@ -15,6 +15,7 @@ import re
 import io
 import csv
 import random
+import bcrypt
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -587,6 +588,84 @@ async def get_supported_currencies():
         "CAD": {"name": "Canadian Dollar", "symbol": "C$"}
     }
     return {"currencies": currency_info, "supported": SUPPORTED_CURRENCIES}
+
+# ============ USER PROFILE MANAGEMENT ============
+
+class UpdateProfileRequest(BaseModel):
+    name: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.get("/user/profile")
+async def get_user_profile(user_id: str = Depends(require_auth)):
+    """Get current user's profile"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@api_router.put("/user/profile")
+async def update_user_profile(request: UpdateProfileRequest, user_id: str = Depends(require_auth)):
+    """Update user's name"""
+    if not request.name or len(request.name.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Name must be at least 2 characters")
+    
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"name": request.name.strip()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    return user
+
+@api_router.put("/user/password")
+async def change_user_password(request: ChangePasswordRequest, user_id: str = Depends(require_auth)):
+    """Change user's password"""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not bcrypt.checkpw(request.current_password.encode('utf-8'), user["password"].encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Validate new password
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    # Hash and update
+    hashed_password = bcrypt.hashpw(request.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    return {"message": "Password changed successfully"}
+
+@api_router.delete("/user/account")
+async def delete_user_account(user_id: str = Depends(require_auth)):
+    """Delete user account and all associated data"""
+    # Delete all user data
+    await db.income_entries.delete_many({"user_id": user_id})
+    await db.expense_entries.delete_many({"user_id": user_id})
+    await db.recurring_transactions.delete_many({"user_id": user_id})
+    await db.budget_limits.delete_many({"user_id": user_id})
+    await db.user_settings.delete_many({"user_id": user_id})
+    await db.products.delete_many({"user_id": user_id})
+    await db.categories.delete_many({"user_id": user_id})
+    
+    # Delete the user
+    result = await db.users.delete_one({"id": user_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "Account deleted successfully"}
 
 # ============ RECURRING TRANSACTIONS ENDPOINTS ============
 

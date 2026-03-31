@@ -13,6 +13,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { RecurringPage } from './pages/RecurringPage';
 import { BudgetsPage } from './pages/BudgetsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { Layout } from './components/Layout';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
@@ -168,6 +169,17 @@ function AppRoutes() {
           <PrivateRoute>
             <Layout>
               <SettingsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <ProfilePage />
             </Layout>
           </PrivateRoute>
         }

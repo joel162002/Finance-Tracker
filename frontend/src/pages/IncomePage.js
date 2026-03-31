@@ -320,10 +320,12 @@ export const IncomePage = () => {
                 </Select>
                 <p className="text-xs text-slate-500 mt-1">Or type a new product name below</p>
                 <Input
+                  id="product_name_custom"
                   value={formData.product_name}
                   onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
                   placeholder="Type custom product name"
                   className="rounded-xl bg-slate-50 mt-2"
+                  data-testid="income-product-input"
                 />
               </div>
 

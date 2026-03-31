@@ -9,6 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -20,7 +27,10 @@ import {
   Menu,
   X,
   Repeat,
-  PiggyBank
+  PiggyBank,
+  User,
+  KeyRound,
+  Trash2
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -28,7 +38,7 @@ import { toast } from 'sonner';
 export const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { currency, setCurrency, currencyInfo } = useCurrency();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [changingCurrency, setChangingCurrency] = useState(false);
@@ -121,16 +131,52 @@ export const Layout = ({ children }) => {
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
-                <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.name?.charAt(0) || 'D'}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-slate-700">
-                  {user?.name || 'Demo User'}
-                </span>
-              </div>
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button 
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    data-testid="user-profile-trigger"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">
+                        {user?.name?.charAt(0) || 'D'}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-slate-700">
+                      {user?.name || 'Demo User'}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/profile')}
+                    className="cursor-pointer"
+                    data-testid="edit-profile-btn"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/profile?tab=password')}
+                    className="cursor-pointer"
+                    data-testid="change-password-btn"
+                  >
+                    <KeyRound className="w-4 h-4 mr-2" />
+                    Change Password
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/profile?tab=delete')}
+                    className="cursor-pointer text-red-600 focus:text-red-600"
+                    data-testid="delete-account-btn"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Account
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 onClick={handleLogout}
                 variant="ghost"
@@ -197,14 +243,24 @@ export const Layout = ({ children }) => {
                   );
                 })}
                 <div className="my-2 border-t border-slate-200"></div>
-                <div className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600">
+                
+                {/* Mobile Profile Section */}
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 rounded-lg"
+                >
                   <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
                       {user?.name?.charAt(0) || 'D'}
                     </span>
                   </div>
-                  <span className="font-medium">{user?.name || 'Demo User'}</span>
-                </div>
+                  <div>
+                    <span className="font-medium block">{user?.name || 'Demo User'}</span>
+                    <span className="text-xs text-slate-400">Tap to edit profile</span>
+                  </div>
+                </Link>
+                
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-all"
