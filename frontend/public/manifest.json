@@ -1,11 +1,11 @@
 {
-  "name": "JF Finance Tracker",
-  "short_name": "JF Finance",
-  "description": "Personal business finance tracking application by Joel Jalapit",
+  "name": "KitaTracker",
+  "short_name": "KitaTracker",
+  "description": "Personal business finance tracking application - Track your income and expenses",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#1E5631",
+  "background_color": "#0A1628",
+  "theme_color": "#0A1628",
   "orientation": "portrait-primary",
   "icons": [
     {

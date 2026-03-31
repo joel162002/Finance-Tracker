@@ -51,13 +51,13 @@ export const LoginPage = () => {
         <div className="mb-8 text-center">
           <img 
             src="/logo.png" 
-            alt="JF Finance Tracker" 
-            className="w-32 h-32 mx-auto mb-4"
+            alt="KitaTracker" 
+            className="w-32 h-32 mx-auto mb-4 rounded-xl"
           />
           <h1 className="text-3xl sm:text-4xl tracking-tight font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Welcome Back
           </h1>
-          <p className="mt-2 text-base leading-relaxed text-slate-600">Sign in to manage your finances</p>
+          <p className="mt-2 text-base leading-relaxed text-slate-600">Sign in to KitaTracker</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

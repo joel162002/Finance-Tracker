@@ -42,12 +42,12 @@ export const Layout = ({ children }) => {
             <div className="flex items-center gap-3">
               <img 
                 src="/logo-48x48.png" 
-                alt="JF Finance Tracker" 
+                alt="KitaTracker" 
                 className="w-10 h-10 rounded-lg flex-shrink-0"
               />
               <h1 className="text-base sm:text-lg md:text-xl font-medium text-slate-900 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                <span className="hidden sm:inline">JF Finance Tracker</span>
-                <span className="sm:hidden">Finance Tracker</span>
+                <span className="hidden sm:inline">KitaTracker</span>
+                <span className="sm:hidden">KitaTracker</span>
               </h1>
             </div>
 
