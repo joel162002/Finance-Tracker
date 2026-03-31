@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallback } from './pages/AuthCallback';
 import { DashboardPage } from './pages/DashboardPage';
@@ -10,6 +11,8 @@ import { ExpensesPage } from './pages/ExpensesPage';
 import { MonthlySummaryPage } from './pages/MonthlySummaryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { RecurringPage } from './pages/RecurringPage';
+import { BudgetsPage } from './pages/BudgetsPage';
 import { Layout } from './components/Layout';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
@@ -138,6 +141,28 @@ function AppRoutes() {
       />
       
       <Route
+        path="/recurring"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <RecurringPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
+        path="/budgets"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <BudgetsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
+      <Route
         path="/settings"
         element={
           <PrivateRoute>
@@ -156,13 +181,15 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <BrowserRouter>
-          <AppRouter />
-          <InstallPrompt />
-          <Toaster position="top-right" />
-        </BrowserRouter>
-      </DataProvider>
+      <CurrencyProvider>
+        <DataProvider>
+          <BrowserRouter>
+            <AppRouter />
+            <InstallPrompt />
+            <Toaster position="top-right" />
+          </BrowserRouter>
+        </DataProvider>
+      </CurrencyProvider>
     </AuthProvider>
   );
 }

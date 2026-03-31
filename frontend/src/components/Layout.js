@@ -1,6 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -10,21 +18,27 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  Repeat,
+  PiggyBank
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { currency, setCurrency, currencyInfo } = useCurrency();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [changingCurrency, setChangingCurrency] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Income', path: '/income', icon: TrendingUp },
     { name: 'Expenses', path: '/expenses', icon: TrendingDown },
-    { name: 'Monthly Summary', path: '/monthly', icon: Calendar },
+    { name: 'Recurring', path: '/recurring', icon: Repeat },
+    { name: 'Budgets', path: '/budgets', icon: PiggyBank },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
     { name: 'Settings', path: '/settings', icon: Settings }
   ];
@@ -32,6 +46,17 @@ export const Layout = ({ children }) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleCurrencyChange = async (newCurrency) => {
+    setChangingCurrency(true);
+    const success = await setCurrency(newCurrency);
+    if (success) {
+      toast.success(`Currency changed to ${currencyInfo[newCurrency]?.name || newCurrency}`);
+    } else {
+      toast.error('Failed to change currency');
+    }
+    setChangingCurrency(false);
   };
 
   return (
@@ -74,6 +99,28 @@ export const Layout = ({ children }) => {
             </div>
 
             <div className="hidden lg:flex items-center gap-3">
+              {/* Currency Selector */}
+              <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
+                <SelectTrigger className="w-[100px] h-9 rounded-lg border-slate-200" data-testid="header-currency-select">
+                  <SelectValue>
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-mono text-base">{currencyInfo[currency]?.symbol}</span>
+                      <span className="text-sm">{currency}</span>
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(currencyInfo).map(([code, info]) => (
+                    <SelectItem key={code} value={code}>
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-base w-6">{info.symbol}</span>
+                        <span>{code}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
                 <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
@@ -95,14 +142,36 @@ export const Layout = ({ children }) => {
               </Button>
             </div>
 
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-              data-testid="mobile-menu-toggle"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Mobile: Currency + Menu */}
+            <div className="flex lg:hidden items-center gap-2">
+              {/* Mobile Currency Selector */}
+              <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
+                <SelectTrigger className="w-[70px] h-9 rounded-lg border-slate-200 text-sm" data-testid="mobile-currency-select">
+                  <SelectValue>
+                    <span className="font-mono">{currencyInfo[currency]?.symbol}</span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(currencyInfo).map(([code, info]) => (
+                    <SelectItem key={code} value={code}>
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono w-5">{info.symbol}</span>
+                        <span>{code}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                data-testid="mobile-menu-toggle"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
 
           {mobileMenuOpen && (

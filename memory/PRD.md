@@ -1,7 +1,7 @@
 # KitaTracker - Product Requirements Document
 
 ## Original Problem Statement
-Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard, Income/Expense CRUD, Monthly Summaries, Reports, Settings, Smart Import, PWA offline support, and Premium Authentication UI.
+Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard, Income/Expense CRUD, Recurring Transactions, Budget Limits, Monthly Summaries, Reports, Settings, Smart Import, PWA offline support, and Premium Authentication UI.
 
 ## Tech Stack
 - **Frontend**: React, Tailwind CSS, Shadcn UI, Recharts
@@ -10,61 +10,69 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 - **PWA**: Service Worker + Manifest
 - **Authentication**: JWT tokens, Google OAuth via Emergent Integrations
 
-## Core Features Implemented
+## Core Features
 
 ### Dashboard
-- Summary cards with totals
-- Interactive charts (Recharts)
-- User data isolation - each user sees only their data
+- Summary cards (Total Income, Expenses, Net Profit, Transactions)
+- Interactive charts (Income vs Expenses line chart)
+- Top Customers list
+- Month selector
+- **Currency selector in header** (quick access)
 
 ### Income/Expense Management
 - Full CRUD operations
-- Multi-currency support (10 currencies)
+- Multi-currency support per entry
 - Filter by month, search, category
 - Export to CSV
+- Product/Category dropdowns
 
-### Multi-Currency Support (NEW - March 31, 2026)
-Supported currencies:
-- **PHP** (₱) - Philippine Peso
-- **USD** ($) - US Dollar
-- **EUR** (€) - Euro
-- **GBP** (£) - British Pound
-- **JPY** (¥) - Japanese Yen
-- **CNY** (¥) - Chinese Yuan
-- **KRW** (₩) - Korean Won
-- **SGD** (S$) - Singapore Dollar
-- **AUD** (A$) - Australian Dollar
-- **CAD** (C$) - Canadian Dollar
+### Recurring Transactions (NEW - March 31, 2026)
+- Manage recurring income and expenses
+- Frequencies: Daily, Weekly, Monthly, Yearly
+- Start/End dates
+- Pause/Resume functionality
+- Separate cards for income vs expenses
 
-User can set default currency in Settings > Currency tab.
+### Budget Limits (NEW - March 31, 2026)
+- Set spending limits by category or total
+- Monthly budget periods
+- Progress bar visualization
+- Alert thresholds (default 80%)
+- Real-time alerts:
+  - Warning when approaching limit (yellow)
+  - Over budget alert (red)
+- Spending breakdown by category
 
-### Email Verification (NEW - March 31, 2026)
-- 6-digit verification code sent during signup
-- User must verify email before accessing app
-- Demo mode: code displayed on screen
-- Resend code option
-- 15-minute code expiry
+### Multi-Currency Support (10 currencies)
+- PHP (₱), USD ($), EUR (€), GBP (£), JPY (¥)
+- CNY (¥), KRW (₩), SGD (S$), AUD (A$), CAD (C$)
+- **Currency selector in header** for quick switching
+- Per-entry currency selection
+- User default currency in settings
 
-### Backup & Restore (IMPROVED - March 31, 2026)
-- **Export**: Download all data as JSON
-- **Restore**: Confirmation dialog with backup details
-- **REPLACES existing data** (not additive)
-- Loading modal during restore with Cancel button
-- Progress indicator showing import status
-- Cannot dismiss modal by clicking outside
+### Email Verification
+- 6-digit code during signup
+- Must verify before accessing app
+- Demo mode: code shown on screen
+- Resend option, 15-minute expiry
+
+### Backup & Restore
+- Export all data as JSON (v2.0 format)
+- **Replaces existing data** on restore (not additive)
+- Confirmation dialog with backup details
+- Loading modal with progress + Cancel button
 
 ### Settings
 - Products management
 - Categories management
-- **Currency settings** (NEW)
+- Currency settings (grid view)
 - Smart Import
 - Backup & Restore
 
 ### Authentication
 - Premium glassmorphism UI
-- Email/Password login
-- **Email verification** (NEW)
-- Google OAuth via Emergent
+- Email/Password + Email verification
+- Google OAuth
 - Forgot password flow
 - JWT tokens
 
@@ -72,78 +80,70 @@ User can set default currency in Settings > Currency tab.
 
 ### Auth
 - `POST /api/auth/register` - Register (returns verification code)
-- `POST /api/auth/send-verification` - Resend verification code
-- `POST /api/auth/verify-email` - Verify email with code
+- `POST /api/auth/verify-email` - Verify email
+- `POST /api/auth/send-verification` - Resend code
 - `POST /api/auth/login` - Login
-- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/forgot-password` - Request reset
 - `POST /api/auth/reset-password` - Reset password
-- `POST /api/auth/google/callback` - Google OAuth callback
+- `POST /api/auth/google/callback` - Google OAuth
 
 ### User Settings
-- `GET /api/user/settings` - Get user settings (currency, etc.)
-- `PUT /api/user/settings` - Update user settings
-- `GET /api/currencies` - Get supported currencies list
+- `GET /api/user/settings` - Get settings
+- `PUT /api/user/settings` - Update settings
+- `GET /api/currencies` - Get supported currencies
+
+### Recurring Transactions
+- `GET /api/recurring` - List all
+- `POST /api/recurring` - Create
+- `PUT /api/recurring/{id}` - Update
+- `DELETE /api/recurring/{id}` - Delete
+- `POST /api/recurring/{id}/toggle` - Pause/Resume
+
+### Budget Limits
+- `GET /api/budgets` - List budgets
+- `GET /api/budgets/status` - Get status with spending
+- `POST /api/budgets` - Create budget
+- `PUT /api/budgets/{id}` - Update
+- `DELETE /api/budgets/{id}` - Delete
 
 ### Data (all require auth)
 - `GET/POST/PUT/DELETE /api/income` - Income CRUD
 - `GET/POST/PUT/DELETE /api/expenses` - Expenses CRUD
 - `GET /api/analytics/dashboard` - Dashboard data
-- `DELETE /api/data/clear-all` - Clear all user data
+- `DELETE /api/data/clear-all` - Clear user data
 
-## Database Schema
+## Database Collections
+- `users` - User accounts
+- `user_settings` - User preferences (currency, etc.)
+- `income_entries` - Income records
+- `expense_entries` - Expense records
+- `recurring_transactions` - Recurring setups
+- `budget_limits` - Budget configurations
+- `email_verifications` - Verification codes
+- `user_sessions` - OAuth sessions
 
-### users
-```json
-{
-  "id": "user_xxx",
-  "email": "user@example.com",
-  "password": "hashed",
-  "username": "username",
-  "email_verified": true/false,
-  "created_at": "ISO date"
-}
-```
-
-### user_settings
-```json
-{
-  "user_id": "user_xxx",
-  "default_currency": "PHP"
-}
-```
-
-### income_entries / expense_entries
-```json
-{
-  "id": "uuid",
-  "user_id": "user_xxx",
-  "date": "2024-03-31",
-  "amount": 1000,
-  "currency": "PHP",
-  ...
-}
-```
-
-### email_verifications
-```json
-{
-  "email": "user@example.com",
-  "verification_code": "123456",
-  "user_id": "user_xxx",
-  "expires_at": "ISO date"
-}
-```
+## Navigation
+- Dashboard
+- Income
+- Expenses
+- **Recurring** (NEW)
+- **Budgets** (NEW)
+- Reports
+- Settings
 
 ## Test Credentials
 - Main: joeljalapitjr@gmail.com / joelpogi
 - Demo: demo@finance.com / demo123
 
 ## Recent Updates (March 31, 2026)
-1. ✅ Multi-currency support (10 currencies)
-2. ✅ Email verification during signup
-3. ✅ Backup restore improvements (replace not add, confirmation dialog, loading modal)
+1. ✅ Recurring transactions (income/expenses)
+2. ✅ Budget limits with alerts
+3. ✅ Currency selector in header
+4. ✅ Multi-currency support (10 currencies)
+5. ✅ Email verification during signup
+6. ✅ Backup restore improvements (replace mode)
 
 ## Future/Backlog
-- Recurring income/expense tracking (P2)
-- Monthly budget limits with alerts (P2)
-- Refactor server.py into /routes directory (P3)
+- Auto-generate entries from recurring (cron job)
+- Email notifications for budget alerts
+- Refactor server.py into /routes directory
