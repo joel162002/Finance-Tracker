@@ -145,6 +145,8 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 7. ✅ **Fixed global currency formatting** - Currency symbol now updates across all pages (Dashboard, Income, Expenses, Reports, Budgets, Recurring) when changed from header
 8. ✅ **Removed redundant Currency tab from Settings** - Currency selection is now only in the header
 9. ✅ **User Profile Management** - Clickable profile in header with options to edit name, change password, and delete account
+10. ✅ **Fixed input focus loss bug** - Users can now type smoothly in Product/Customer/Category inputs without text resetting (root cause: Radix Select controlled/uncontrolled state switching)
+11. ✅ **Fixed date handling** - Date fields now properly default to today's local date, entries save to correct month based on selected date
 
 ## Future/Backlog
 - Auto-generate entries from recurring (cron job)
