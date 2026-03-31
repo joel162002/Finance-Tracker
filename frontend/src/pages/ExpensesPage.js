@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatDate, getDayName, getCurrentMonth, formatDateForInput } from '../utils/date';
+import { formatDate, getDayName, getCurrentMonth, getTodayDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,22 +45,29 @@ export const ExpensesPage = () => {
   const { triggerRefresh } = useDataRefresh();
   const { formatCurrency } = useCurrency();
   
+  // Use refs to prevent input focus loss
+  const descriptionInputRef = useRef(null);
+  const categoryInputRef = useRef(null);
+  
   const [filters, setFilters] = useState({
     month: getCurrentMonth(),
     search: '',
     category_name: ''
   });
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    day: getDayName(new Date().toISOString()),
+  // Form state with proper initialization using local date
+  const getInitialFormData = useCallback(() => ({
+    date: getTodayDate(),
+    day: getDayName(getTodayDate()),
     amount: '',
     description: '',
     category_name: '',
     notes: '',
     payment_method: 'Cash',
     reference_number: ''
-  });
+  }), []);
+
+  const [formData, setFormData] = useState(getInitialFormData);
 
   const [categories, setCategories] = useState([]);
 
@@ -133,12 +140,14 @@ export const ExpensesPage = () => {
 
   const handleEdit = (item) => {
     setEditingItem(item);
+    // Ensure date is properly formatted
+    const editDate = item.date ? item.date.split('T')[0] : getTodayDate();
     setFormData({
-      date: formatDateForInput(item.date),
-      day: item.day,
+      date: editDate,
+      day: getDayName(editDate),
       amount: item.amount,
-      description: item.description,
-      category_name: item.category_name,
+      description: item.description || '',
+      category_name: item.category_name || '',
       notes: item.notes || '',
       payment_method: item.payment_method || 'Cash',
       reference_number: item.reference_number || ''
@@ -168,27 +177,34 @@ export const ExpensesPage = () => {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingItem(null);
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      day: getDayName(new Date().toISOString()),
-      amount: '',
-      description: '',
-      category_name: '',
-      notes: '',
-      payment_method: 'Cash',
-      reference_number: ''
-    });
-  };
+    setFormData(getInitialFormData());
+  }, [getInitialFormData]);
 
-  const handleDateChange = (date) => {
+  const handleDateChange = useCallback((date) => {
     setFormData(prev => ({
       ...prev,
       date,
       day: getDayName(date)
     }));
-  };
+  }, []);
+
+  // Stable handler for text inputs to prevent focus loss
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  // Handle select without affecting text input
+  const handleSelectChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -277,7 +293,7 @@ export const ExpensesPage = () => {
                   type="number"
                   step="0.01"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  onChange={(e) => handleInputChange('amount', e.target.value)}
                   placeholder="500"
                   className="rounded-xl bg-slate-50"
                   data-testid="expense-amount-input"
@@ -288,12 +304,14 @@ export const ExpensesPage = () => {
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Input
+                  ref={descriptionInputRef}
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="What did you spend on?"
                   className="rounded-xl bg-slate-50"
                   data-testid="expense-description-input"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -301,30 +319,35 @@ export const ExpensesPage = () => {
               <div>
                 <Label htmlFor="category_name">Category</Label>
                 {categories.length > 0 && (
-                  <Select
-                    value={formData.category_name}
-                    onValueChange={(value) => setFormData({ ...formData, category_name: value })}
-                  >
-                    <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="expense-category-select">
-                      <SelectValue placeholder="Select from existing categories" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      key="category-select"
+                      value={categories.includes(formData.category_name) ? formData.category_name : undefined}
+                      onValueChange={(value) => handleSelectChange('category_name', value)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="expense-category-select">
+                        <SelectValue placeholder="Select from existing categories" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500 mt-1">Or type a new category below</p>
+                  </>
                 )}
-                <p className="text-xs text-slate-500 mt-1">Or type a new category below</p>
                 <Input
+                  ref={categoryInputRef}
                   id="category_name"
                   value={formData.category_name}
-                  onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
+                  onChange={(e) => handleInputChange('category_name', e.target.value)}
                   placeholder="Type category name"
                   className="rounded-xl bg-slate-50 mt-2"
                   data-testid="expense-category-input"
+                  autoComplete="off"
                 />
               </div>
 
@@ -332,7 +355,7 @@ export const ExpensesPage = () => {
                 <Label htmlFor="payment_method">Payment Method</Label>
                 <Select
                   value={formData.payment_method}
-                  onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                  onValueChange={(value) => handleSelectChange('payment_method', value)}
                 >
                   <SelectTrigger className="rounded-xl bg-slate-50" data-testid="expense-payment-select">
                     <SelectValue placeholder="Select payment method" />
@@ -351,10 +374,11 @@ export const ExpensesPage = () => {
                 <Input
                   id="reference_number"
                   value={formData.reference_number}
-                  onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
+                  onChange={(e) => handleInputChange('reference_number', e.target.value)}
                   placeholder="REF-001"
                   className="rounded-xl bg-slate-50"
                   data-testid="expense-reference-input"
+                  autoComplete="off"
                 />
               </div>
 
@@ -363,10 +387,11 @@ export const ExpensesPage = () => {
                 <Input
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder="Additional notes"
                   className="rounded-xl bg-slate-50"
                   data-testid="expense-notes-input"
+                  autoComplete="off"
                 />
               </div>
 

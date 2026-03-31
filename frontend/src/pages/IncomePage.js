@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatDate, getDayName, getCurrentMonth, formatDateForInput } from '../utils/date';
+import { formatDate, getDayName, getCurrentMonth, getTodayDate, getMonthFromDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +45,10 @@ export const IncomePage = () => {
   const { triggerRefresh } = useDataRefresh();
   const { formatCurrency } = useCurrency();
   
+  // Use refs to prevent input focus loss
+  const productInputRef = useRef(null);
+  const personInputRef = useRef(null);
+  
   const [filters, setFilters] = useState({
     month: getCurrentMonth(),
     search: '',
@@ -53,16 +57,19 @@ export const IncomePage = () => {
     payment_status: ''
   });
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    day: getDayName(new Date().toISOString()),
+  // Form state with proper initialization using local date
+  const getInitialFormData = useCallback(() => ({
+    date: getTodayDate(),
+    day: getDayName(getTodayDate()),
     amount: '',
     product_name: '',
     person_name: '',
     notes: '',
     payment_status: 'Paid',
     reference_number: ''
-  });
+  }), []);
+
+  const [formData, setFormData] = useState(getInitialFormData);
 
   const [suggestions, setSuggestions] = useState({
     products: [],
@@ -147,14 +154,16 @@ export const IncomePage = () => {
 
   const handleEdit = (item) => {
     setEditingItem(item);
+    // Ensure date is properly formatted
+    const editDate = item.date ? item.date.split('T')[0] : getTodayDate();
     setFormData({
-      date: formatDateForInput(item.date),
-      day: item.day,
+      date: editDate,
+      day: getDayName(editDate),
       amount: item.amount,
-      product_name: item.product_name,
-      person_name: item.person_name,
+      product_name: item.product_name || '',
+      person_name: item.person_name || '',
       notes: item.notes || '',
-      payment_status: item.payment_status,
+      payment_status: item.payment_status || 'Paid',
       reference_number: item.reference_number || ''
     });
     setDialogOpen(true);
@@ -182,27 +191,34 @@ export const IncomePage = () => {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingItem(null);
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      day: getDayName(new Date().toISOString()),
-      amount: '',
-      product_name: '',
-      person_name: '',
-      notes: '',
-      payment_status: 'Paid',
-      reference_number: ''
-    });
-  };
+    setFormData(getInitialFormData());
+  }, [getInitialFormData]);
 
-  const handleDateChange = (date) => {
+  const handleDateChange = useCallback((date) => {
     setFormData(prev => ({
       ...prev,
       date,
       day: getDayName(date)
     }));
-  };
+  }, []);
+  
+  // Stable handler for text inputs to prevent focus loss
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  // Handle select without affecting text input
+  const handleSelectChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -293,7 +309,7 @@ export const IncomePage = () => {
                   type="number"
                   step="0.01"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  onChange={(e) => handleInputChange('amount', e.target.value)}
                   placeholder="1000"
                   className="rounded-xl bg-slate-50"
                   data-testid="income-amount-input"
@@ -303,59 +319,71 @@ export const IncomePage = () => {
 
               <div>
                 <Label htmlFor="product_name">Product</Label>
-                <Select
-                  value={formData.product_name}
-                  onValueChange={(value) => setFormData({ ...formData, product_name: value })}
-                >
-                  <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-product-select">
-                    <SelectValue placeholder="Select or type product name" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {suggestions.products.map((product) => (
-                      <SelectItem key={product} value={product}>
-                        {product}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500 mt-1">Or type a new product name below</p>
+                {suggestions.products.length > 0 && (
+                  <>
+                    <Select
+                      key="product-select"
+                      value={suggestions.products.includes(formData.product_name) ? formData.product_name : undefined}
+                      onValueChange={(value) => handleSelectChange('product_name', value)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-product-select">
+                        <SelectValue placeholder="Select from existing products" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {suggestions.products.map((product) => (
+                          <SelectItem key={product} value={product}>
+                            {product}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500 mt-1">Or type a new product name below</p>
+                  </>
+                )}
                 <Input
+                  ref={productInputRef}
                   id="product_name_custom"
                   value={formData.product_name}
-                  onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
-                  placeholder="Type custom product name"
+                  onChange={(e) => handleInputChange('product_name', e.target.value)}
+                  placeholder="Type product name"
                   className="rounded-xl bg-slate-50 mt-2"
                   data-testid="income-product-input"
+                  autoComplete="off"
                 />
               </div>
 
               <div>
                 <Label htmlFor="person_name">Customer / Person</Label>
                 {suggestions.persons.length > 0 && (
-                  <Select
-                    value={formData.person_name}
-                    onValueChange={(value) => setFormData({ ...formData, person_name: value })}
-                  >
-                    <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-person-select">
-                      <SelectValue placeholder="Select from existing customers" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {suggestions.persons.map((person) => (
-                        <SelectItem key={person} value={person}>
-                          {person}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      key="person-select"
+                      value={suggestions.persons.includes(formData.person_name) ? formData.person_name : undefined}
+                      onValueChange={(value) => handleSelectChange('person_name', value)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-person-select">
+                        <SelectValue placeholder="Select from existing customers" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {suggestions.persons.map((person) => (
+                          <SelectItem key={person} value={person}>
+                            {person}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500 mt-1">Or type a new customer name below</p>
+                  </>
                 )}
-                <p className="text-xs text-slate-500 mt-1">Or type a new customer name below</p>
                 <Input
+                  ref={personInputRef}
                   id="person_name"
                   value={formData.person_name}
-                  onChange={(e) => setFormData({ ...formData, person_name: e.target.value })}
+                  onChange={(e) => handleInputChange('person_name', e.target.value)}
                   placeholder="Type customer name"
                   className="rounded-xl bg-slate-50 mt-2"
                   data-testid="income-person-input"
+                  autoComplete="off"
                 />
               </div>
 
@@ -363,7 +391,7 @@ export const IncomePage = () => {
                 <Label htmlFor="payment_status">Payment Status</Label>
                 <Select
                   value={formData.payment_status}
-                  onValueChange={(value) => setFormData({ ...formData, payment_status: value })}
+                  onValueChange={(value) => handleSelectChange('payment_status', value)}
                 >
                   <SelectTrigger className="rounded-xl bg-slate-50" data-testid="income-status-select">
                     <SelectValue placeholder="Select status" />
@@ -380,10 +408,11 @@ export const IncomePage = () => {
                 <Input
                   id="reference_number"
                   value={formData.reference_number}
-                  onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
+                  onChange={(e) => handleInputChange('reference_number', e.target.value)}
                   placeholder="INV-001"
                   className="rounded-xl bg-slate-50"
                   data-testid="income-reference-input"
+                  autoComplete="off"
                 />
               </div>
 
@@ -392,10 +421,11 @@ export const IncomePage = () => {
                 <Input
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder="Additional notes"
                   className="rounded-xl bg-slate-50"
                   data-testid="income-notes-input"
+                  autoComplete="off"
                 />
               </div>
 
