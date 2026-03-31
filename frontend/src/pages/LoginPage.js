@@ -49,8 +49,9 @@ export const LoginPage = () => {
   const navigate = useNavigate();
 
   const handleGoogleLogin = useCallback(() => {
-    const redirectUrl = window.location.origin + '/dashboard';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    // Redirect to Emergent OAuth - callback will include session_id in hash fragment
+    const callbackUrl = window.location.origin + '/dashboard';
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(callbackUrl)}`;
   }, []);
 
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);

@@ -237,18 +237,18 @@ export const BackupRestore = () => {
                 onChange={handleImportBackup}
                 className="hidden"
                 disabled={importing}
+                data-testid="backup-file-input"
               />
-              <Label htmlFor="backup-file">
-                <Button
-                  as="span"
-                  disabled={importing}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer"
-                  data-testid="import-backup-button"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {importing ? 'Restoring...' : 'Restore Backup'}
-                </Button>
-              </Label>
+              <button
+                type="button"
+                onClick={() => document.getElementById('backup-file').click()}
+                disabled={importing}
+                className="inline-flex items-center justify-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer font-medium transition-colors disabled:opacity-50"
+                data-testid="import-backup-button"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {importing ? 'Restoring...' : 'Restore Backup'}
+              </button>
             </div>
           </div>
         </div>
