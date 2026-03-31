@@ -168,6 +168,14 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    reset_code: str
+    new_password: str
+
 @api_router.post("/auth/register")
 async def register(request: RegisterRequest):
     # Check if email already exists
@@ -184,7 +192,7 @@ async def register(request: RegisterRequest):
     if len(request.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     
-    # Create new user
+    # Create new user with clean slate - NO demo data inheritance
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     new_user = {
         "id": user_id,
@@ -193,7 +201,11 @@ async def register(request: RegisterRequest):
         "email": request.email,
         "password": request.password,
         "name": request.username,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        # Initialize with zero stats
+        "total_income": 0,
+        "total_expenses": 0,
+        "net_profit": 0
     }
     
     await db.users.insert_one(new_user)
@@ -205,6 +217,77 @@ async def register(request: RegisterRequest):
         "token": f"token-{user_id}",
         "user": user_response
     }
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Send password reset code to user's email"""
+    user = await db.users.find_one({"email": request.email})
+    if not user:
+        # Don't reveal if email exists for security
+        return {"message": "If this email exists, a reset code has been sent."}
+    
+    # Generate a 6-digit reset code
+    import random
+    reset_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    # Store reset code with expiry (15 minutes)
+    await db.password_resets.delete_many({"email": request.email})  # Remove old codes
+    await db.password_resets.insert_one({
+        "email": request.email,
+        "reset_code": reset_code,
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15)
+    })
+    
+    # In production, send email here. For demo, we'll return the code.
+    # NOTE: In production, never return the code - send via email instead
+    logger.info(f"Password reset code for {request.email}: {reset_code}")
+    
+    return {
+        "message": "Reset code sent to your email.",
+        "demo_code": reset_code  # Remove this in production
+    }
+
+@api_router.post("/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    """Reset password using reset code"""
+    # Validate password length
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find valid reset code
+    reset_doc = await db.password_resets.find_one({
+        "email": request.email,
+        "reset_code": request.reset_code
+    })
+    
+    if not reset_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+    
+    # Check expiry
+    expires_at = reset_doc["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
+        await db.password_resets.delete_one({"_id": reset_doc["_id"]})
+        raise HTTPException(status_code=400, detail="Reset code has expired")
+    
+    # Update password
+    result = await db.users.update_one(
+        {"email": request.email},
+        {"$set": {"password": request.new_password}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to update password")
+    
+    # Delete used reset code
+    await db.password_resets.delete_many({"email": request.email})
+    
+    return {"message": "Password reset successfully. You can now log in with your new password."}
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
