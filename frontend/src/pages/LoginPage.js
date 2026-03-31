@@ -52,7 +52,8 @@ export const LoginPage = () => {
           <img 
             src="/logo.png" 
             alt="KitaTracker" 
-            className="max-w-[200px] h-auto mx-auto mb-4"
+            className="max-w-[140px] h-auto mx-auto mb-4 rounded-lg"
+            style={{ borderRadius: '8px' }}
           />
           <h1 className="text-3xl sm:text-4xl tracking-tight font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Welcome Back
