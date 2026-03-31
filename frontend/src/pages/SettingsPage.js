@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,9 +26,6 @@ import { Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { getDayName } from '../utils/date';
 
 import { BackupRestore } from '../components/BackupRestore';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 export const SettingsPage = () => {
   const [products, setProducts] = useState([]);
@@ -62,8 +59,8 @@ export const SettingsPage = () => {
     try {
       setLoading(true);
       const [productsRes, categoriesRes] = await Promise.all([
-        axios.get(`${API}/products`),
-        axios.get(`${API}/categories`)
+        api.get('/products'),
+        api.get('/categories')
       ]);
       setProducts(productsRes.data);
       setCategories(categoriesRes.data);
@@ -78,10 +75,10 @@ export const SettingsPage = () => {
     e.preventDefault();
     try {
       if (editingProduct) {
-        await axios.put(`${API}/products/${editingProduct.id}`, productForm);
+        await api.put(`/products/${editingProduct.id}`, productForm);
         toast.success('Product updated successfully');
       } else {
-        await axios.post(`${API}/products`, productForm);
+        await api.post('/products', productForm);
         toast.success('Product added successfully');
       }
       setProductDialogOpen(false);
@@ -97,10 +94,10 @@ export const SettingsPage = () => {
     e.preventDefault();
     try {
       if (editingCategory) {
-        await axios.put(`${API}/categories/${editingCategory.id}`, categoryForm);
+        await api.put(`/categories/${editingCategory.id}`, categoryForm);
         toast.success('Category updated successfully');
       } else {
-        await axios.post(`${API}/categories`, categoryForm);
+        await api.post('/categories', categoryForm);
         toast.success('Category added successfully');
       }
       setCategoryDialogOpen(false);
@@ -115,10 +112,10 @@ export const SettingsPage = () => {
   const handleDelete = async () => {
     try {
       if (deleteType === 'product') {
-        await axios.delete(`${API}/products/${itemToDelete.id}`);
+        await api.delete(`/products/${itemToDelete.id}`);
         toast.success('Product deleted successfully');
       } else {
-        await axios.delete(`${API}/categories/${itemToDelete.id}`);
+        await api.delete(`/categories/${itemToDelete.id}`);
         toast.success('Category deleted successfully');
       }
       setDeleteDialogOpen(false);
@@ -133,7 +130,7 @@ export const SettingsPage = () => {
   const handleParseImport = async () => {
     try {
       setImporting(true);
-      const response = await axios.post(`${API}/import/parse`, {
+      const response = await api.post('/import/parse', {
         raw_text: importText,
         entry_type: importType
       });
@@ -159,7 +156,7 @@ export const SettingsPage = () => {
         const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
         if (importType === 'income') {
-          return axios.post(`${API}/income`, {
+          return api.post('/income', {
             date: dateStr,
             day: getDayName(dateStr),
             amount: entry.amount,
@@ -194,7 +191,7 @@ export const SettingsPage = () => {
             category = 'Medical';
           }
           
-          return axios.post(`${API}/expenses`, {
+          return api.post('/expenses', {
             date: dateStr,
             day: getDayName(dateStr),
             amount: entry.amount,

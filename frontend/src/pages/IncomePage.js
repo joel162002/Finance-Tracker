@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, getDayName, getCurrentMonth, formatDateForInput } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -33,9 +33,6 @@ import {
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search, Filter, Download } from 'lucide-react';
 import { useDataRefresh } from '../context/DataContext';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 export const IncomePage = () => {
   const [income, setIncome] = useState([]);
@@ -86,7 +83,7 @@ export const IncomePage = () => {
       if (filters.person_name) params.person_name = filters.person_name;
       if (filters.payment_status) params.payment_status = filters.payment_status;
 
-      const response = await axios.get(`${API}/income`, { params });
+      const response = await api.get('/income', { params });
       setIncome(response.data);
     } catch (error) {
       toast.error('Failed to fetch income data');
@@ -98,8 +95,8 @@ export const IncomePage = () => {
   const fetchSuggestions = async () => {
     try {
       const [productsRes, personsRes] = await Promise.all([
-        axios.get(`${API}/suggestions/products`),
-        axios.get(`${API}/suggestions/persons`)
+        api.get('/suggestions/products'),
+        api.get('/suggestions/persons')
       ]);
       setSuggestions({
         products: productsRes.data.suggestions,
@@ -123,10 +120,10 @@ export const IncomePage = () => {
       console.log('Submitting income:', editingItem ? 'UPDATE' : 'CREATE', formData);
       
       if (editingItem) {
-        const response = await axios.put(`${API}/income/${editingItem.id}`, formData);
+        const response = await api.put(`/income/${editingItem.id}`, formData);
         console.log('Update response:', response);
       } else {
-        const response = await axios.post(`${API}/income`, formData);
+        const response = await api.post('/income', formData);
         console.log('Create response:', response);
       }
       
@@ -170,7 +167,7 @@ export const IncomePage = () => {
     
     try {
       console.log('Deleting income entry:', itemToDelete.id);
-      const response = await axios.delete(`${API}/income/${itemToDelete.id}`);
+      const response = await api.delete(`/income/${itemToDelete.id}`);
       console.log('Delete response:', response);
       toast.success('Income entry deleted successfully');
       setDeleteDialogOpen(false);
@@ -208,7 +205,7 @@ export const IncomePage = () => {
 
   const handleExport = async () => {
     try {
-      const response = await axios.get(`${API}/export/income`, {
+      const response = await api.get('/export/income', {
         params: { month: filters.month },
         responseType: 'blob'
       });

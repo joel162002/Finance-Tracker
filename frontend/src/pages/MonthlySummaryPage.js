@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,6 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 const INCOME_COLOR = '#059669';
 const EXPENSE_COLOR = '#DC2626';
@@ -33,7 +30,7 @@ export const MonthlySummaryPage = () => {
   const fetchSummary = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/analytics/monthly`, {
+      const response = await api.get('/analytics/monthly', {
         params: { month: selectedMonth }
       });
       setSummary(response.data);

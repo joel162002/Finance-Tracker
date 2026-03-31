@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Download, Upload, Database, Trash2, RefreshCw } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,9 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 // Utility to clear all browser caches and force refresh
 const clearBrowserCache = async () => {
@@ -69,10 +66,10 @@ export const BackupRestore = () => {
       
       // Fetch all data
       const [incomeRes, expenseRes, productsRes, categoriesRes] = await Promise.all([
-        axios.get(`${API}/income`),
-        axios.get(`${API}/expenses`),
-        axios.get(`${API}/products`),
-        axios.get(`${API}/categories`)
+        api.get('/income'),
+        api.get('/expenses'),
+        api.get('/products'),
+        api.get('/categories')
       ]);
 
       const backup = {
@@ -133,7 +130,7 @@ export const BackupRestore = () => {
       if (backup.data.income) {
         for (const entry of backup.data.income) {
           try {
-            await axios.post(`${API}/income`, {
+            await api.post('/income', {
               date: entry.date,
               day: entry.day,
               amount: entry.amount,
@@ -154,7 +151,7 @@ export const BackupRestore = () => {
       if (backup.data.expenses) {
         for (const entry of backup.data.expenses) {
           try {
-            await axios.post(`${API}/expenses`, {
+            await api.post('/expenses', {
               date: entry.date,
               day: entry.day,
               amount: entry.amount,
@@ -185,7 +182,7 @@ export const BackupRestore = () => {
   const handleClearAllData = async () => {
     try {
       // Use bulk delete endpoint for efficiency and reliability
-      const response = await axios.delete(`${API}/data/clear-all`);
+      const response = await api.delete('/data/clear-all');
       
       const { deleted } = response.data;
       toast.success(`Cleared ${deleted.income_entries} income and ${deleted.expense_entries} expense entries`);

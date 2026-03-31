@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ export const DashboardPage = () => {
   // Fast initial load with quick summary
   const fetchQuickSummary = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/analytics/quick-summary`, {
+      const response = await api.get('/analytics/quick-summary', {
         params: { month: selectedMonth }
       });
       setQuickSummary(response.data);
@@ -58,7 +58,7 @@ export const DashboardPage = () => {
   // Full analytics load (for charts and detailed data)
   const fetchAnalytics = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/analytics/dashboard`, {
+      const response = await api.get('/analytics/dashboard', {
         params: { month: selectedMonth }
       });
       setAnalytics(response.data);

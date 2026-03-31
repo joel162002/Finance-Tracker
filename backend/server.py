@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, Header
 from fastapi.responses import StreamingResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -24,6 +24,42 @@ db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# ============ AUTH DEPENDENCY ============
+
+async def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[str]:
+    """Extract user_id from token. Returns None for unauthenticated requests."""
+    if not authorization:
+        return None
+    
+    # Token format: "token-{user_id}" or "Bearer token-{user_id}" or session token
+    token = authorization.replace("Bearer ", "").strip()
+    
+    # Handle "token-{user_id}" format
+    if token.startswith("token-"):
+        user_id = token.replace("token-", "")
+        return user_id
+    
+    # Handle session token format (from Google OAuth)
+    if token.startswith("session_"):
+        # Look up session in database
+        session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+        if session:
+            return session.get("user_id")
+    
+    # Direct user_id lookup for custom tokens
+    user = await db.users.find_one({"$or": [{"id": token}, {"user_id": token}]}, {"_id": 0})
+    if user:
+        return user.get("id") or user.get("user_id")
+    
+    return None
+
+async def require_auth(authorization: Optional[str] = Header(None)) -> str:
+    """Require authentication - raises 401 if not authenticated."""
+    user_id = await get_current_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return user_id
 
 # Middleware to prevent browser caching of API responses
 class NoCacheMiddleware(BaseHTTPMiddleware):
@@ -460,9 +496,11 @@ async def get_income(
     payment_status: Optional[str] = None,
     search: Optional[str] = None,
     date_from: Optional[str] = None,
-    date_to: Optional[str] = None
+    date_to: Optional[str] = None,
+    user_id: str = Depends(require_auth)
 ):
-    query = {}
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     
     if month:
         query["date"] = {"$regex": f"^{month}"}
@@ -490,30 +528,32 @@ async def get_income(
     return income_entries
 
 @api_router.post("/income", response_model=IncomeEntry)
-async def create_income(income: IncomeEntryCreate, user_id: str = "demo-user"):
+async def create_income(income: IncomeEntryCreate, user_id: str = Depends(require_auth)):
     income_obj = IncomeEntry(user_id=user_id, **income.model_dump())
     doc = income_obj.model_dump()
     await db.income_entries.insert_one(doc)
     return income_obj
 
 @api_router.put("/income/{income_id}", response_model=IncomeEntry)
-async def update_income(income_id: str, income: IncomeEntryUpdate):
+async def update_income(income_id: str, income: IncomeEntryUpdate, user_id: str = Depends(require_auth)):
     update_data = {k: v for k, v in income.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Only update if entry belongs to authenticated user
     result = await db.income_entries.update_one(
-        {"id": income_id},
+        {"id": income_id, "user_id": user_id},
         {"$set": update_data}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Income entry not found")
     
-    updated_doc = await db.income_entries.find_one({"id": income_id}, {"_id": 0})
+    updated_doc = await db.income_entries.find_one({"id": income_id, "user_id": user_id}, {"_id": 0})
     return IncomeEntry(**updated_doc)
 
 @api_router.delete("/income/{income_id}")
-async def delete_income(income_id: str):
-    result = await db.income_entries.delete_one({"id": income_id})
+async def delete_income(income_id: str, user_id: str = Depends(require_auth)):
+    # Only delete if entry belongs to authenticated user
+    result = await db.income_entries.delete_one({"id": income_id, "user_id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Income entry not found")
     return {"message": "Income entry deleted successfully"}
@@ -526,9 +566,11 @@ async def get_expenses(
     category_name: Optional[str] = None,
     search: Optional[str] = None,
     date_from: Optional[str] = None,
-    date_to: Optional[str] = None
+    date_to: Optional[str] = None,
+    user_id: str = Depends(require_auth)
 ):
-    query = {}
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     
     if month:
         query["date"] = {"$regex": f"^{month}"}
@@ -550,30 +592,32 @@ async def get_expenses(
     return expense_entries
 
 @api_router.post("/expenses", response_model=ExpenseEntry)
-async def create_expense(expense: ExpenseEntryCreate, user_id: str = "demo-user"):
+async def create_expense(expense: ExpenseEntryCreate, user_id: str = Depends(require_auth)):
     expense_obj = ExpenseEntry(user_id=user_id, **expense.model_dump())
     doc = expense_obj.model_dump()
     await db.expense_entries.insert_one(doc)
     return expense_obj
 
 @api_router.put("/expenses/{expense_id}", response_model=ExpenseEntry)
-async def update_expense(expense_id: str, expense: ExpenseEntryUpdate):
+async def update_expense(expense_id: str, expense: ExpenseEntryUpdate, user_id: str = Depends(require_auth)):
     update_data = {k: v for k, v in expense.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Only update if entry belongs to authenticated user
     result = await db.expense_entries.update_one(
-        {"id": expense_id},
+        {"id": expense_id, "user_id": user_id},
         {"$set": update_data}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
-    updated_doc = await db.expense_entries.find_one({"id": expense_id}, {"_id": 0})
+    updated_doc = await db.expense_entries.find_one({"id": expense_id, "user_id": user_id}, {"_id": 0})
     return ExpenseEntry(**updated_doc)
 
 @api_router.delete("/expenses/{expense_id}")
-async def delete_expense(expense_id: str):
-    result = await db.expense_entries.delete_one({"id": expense_id})
+async def delete_expense(expense_id: str, user_id: str = Depends(require_auth)):
+    # Only delete if entry belongs to authenticated user
+    result = await db.expense_entries.delete_one({"id": expense_id, "user_id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense entry not found")
     return {"message": "Expense entry deleted successfully"}
@@ -581,14 +625,15 @@ async def delete_expense(expense_id: str):
 # ============ BULK DATA OPERATIONS ============
 
 @api_router.delete("/data/clear-all")
-async def clear_all_data():
-    """Clear all income and expense entries from the database"""
+async def clear_all_data(user_id: str = Depends(require_auth)):
+    """Clear all income and expense entries for the authenticated user"""
     try:
-        income_result = await db.income_entries.delete_many({})
-        expense_result = await db.expense_entries.delete_many({})
+        # Only clear data for the authenticated user
+        income_result = await db.income_entries.delete_many({"user_id": user_id})
+        expense_result = await db.expense_entries.delete_many({"user_id": user_id})
         
         return {
-            "message": "All data cleared successfully",
+            "message": "All your data cleared successfully",
             "deleted": {
                 "income_entries": income_result.deleted_count,
                 "expense_entries": expense_result.deleted_count
@@ -600,8 +645,9 @@ async def clear_all_data():
 # ============ ANALYTICS ENDPOINTS ============
 
 @api_router.get("/analytics/dashboard")
-async def get_dashboard_analytics(month: Optional[str] = None):
-    query = {}
+async def get_dashboard_analytics(month: Optional[str] = None, user_id: str = Depends(require_auth)):
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     if month:
         query["date"] = {"$regex": f"^{month}"}
     
@@ -673,8 +719,9 @@ async def get_dashboard_analytics(month: Optional[str] = None):
     }
 
 @api_router.get("/analytics/monthly")
-async def get_monthly_analytics(month: str):
-    query = {"date": {"$regex": f"^{month}"}}
+async def get_monthly_analytics(month: str, user_id: str = Depends(require_auth)):
+    # Filter by authenticated user
+    query = {"user_id": user_id, "date": {"$regex": f"^{month}"}}
     
     income_entries = await db.income_entries.find(query, {"_id": 0}).to_list(10000)
     expense_entries = await db.expense_entries.find(query, {"_id": 0}).to_list(10000)
@@ -742,8 +789,9 @@ async def get_monthly_analytics(month: str):
     }
 
 @api_router.get("/analytics/reports")
-async def get_reports(month: Optional[str] = None):
-    query = {}
+async def get_reports(month: Optional[str] = None, user_id: str = Depends(require_auth)):
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     if month:
         query["date"] = {"$regex": f"^{month}"}
     
@@ -834,8 +882,9 @@ async def parse_import(request: ImportRequest):
 # ============ EXPORT ENDPOINTS ============
 
 @api_router.get("/export/income")
-async def export_income(month: Optional[str] = None):
-    query = {}
+async def export_income(month: Optional[str] = None, user_id: str = Depends(require_auth)):
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     if month:
         query["date"] = {"$regex": f"^{month}"}
     
@@ -865,8 +914,9 @@ async def export_income(month: Optional[str] = None):
     )
 
 @api_router.get("/export/expenses")
-async def export_expenses(month: Optional[str] = None):
-    query = {}
+async def export_expenses(month: Optional[str] = None, user_id: str = Depends(require_auth)):
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     if month:
         query["date"] = {"$regex": f"^{month}"}
     
@@ -898,9 +948,10 @@ async def export_expenses(month: Optional[str] = None):
 # ============ SUGGESTIONS ENDPOINTS ============
 
 @api_router.get("/suggestions/products")
-async def get_product_suggestions():
+async def get_product_suggestions(user_id: str = Depends(require_auth)):
     products = await db.products.find({"is_active": True}, {"_id": 0, "name": 1}).to_list(1000)
-    income_entries = await db.income_entries.find({}, {"_id": 0, "product_name": 1}).to_list(1000)
+    # Get products from user's own income entries
+    income_entries = await db.income_entries.find({"user_id": user_id}, {"_id": 0, "product_name": 1}).to_list(1000)
     
     product_names = set([p["name"] for p in products])
     product_names.update([e["product_name"] for e in income_entries])
@@ -908,16 +959,18 @@ async def get_product_suggestions():
     return {"suggestions": sorted(list(product_names))}
 
 @api_router.get("/suggestions/persons")
-async def get_person_suggestions():
-    income_entries = await db.income_entries.find({}, {"_id": 0, "person_name": 1}).to_list(1000)
+async def get_person_suggestions(user_id: str = Depends(require_auth)):
+    # Get persons from user's own income entries
+    income_entries = await db.income_entries.find({"user_id": user_id}, {"_id": 0, "person_name": 1}).to_list(1000)
     person_names = set([e["person_name"] for e in income_entries if e["person_name"]])
     
     return {"suggestions": sorted(list(person_names))}
 
 @api_router.get("/suggestions/categories")
-async def get_category_suggestions():
+async def get_category_suggestions(user_id: str = Depends(require_auth)):
     categories = await db.expense_categories.find({"is_active": True}, {"_id": 0, "name": 1}).to_list(1000)
-    expense_entries = await db.expense_entries.find({}, {"_id": 0, "category_name": 1}).to_list(1000)
+    # Get categories from user's own expense entries
+    expense_entries = await db.expense_entries.find({"user_id": user_id}, {"_id": 0, "category_name": 1}).to_list(1000)
     
     category_names = set([c["name"] for c in categories])
     category_names.update([e["category_name"] for e in expense_entries])
@@ -925,9 +978,10 @@ async def get_category_suggestions():
     return {"suggestions": sorted(list(category_names))}
 
 @api_router.get("/analytics/quick-summary")
-async def get_quick_summary(month: Optional[str] = None):
+async def get_quick_summary(month: Optional[str] = None, user_id: str = Depends(require_auth)):
     """Fast endpoint for quick totals - optimized for speed"""
-    query = {}
+    # Filter by authenticated user
+    query = {"user_id": user_id}
     if month:
         query["date"] = {"$regex": f"^{month}"}
     
@@ -972,9 +1026,12 @@ async def create_indexes():
         # Index on created_at for faster sorting
         await db.income_entries.create_index("created_at")
         await db.expense_entries.create_index("created_at")
-        # Compound index for common queries
-        await db.income_entries.create_index([("date", 1), ("created_at", -1)])
-        await db.expense_entries.create_index([("date", 1), ("created_at", -1)])
+        # Index on user_id for data isolation
+        await db.income_entries.create_index("user_id")
+        await db.expense_entries.create_index("user_id")
+        # Compound index for common queries (user_id + date)
+        await db.income_entries.create_index([("user_id", 1), ("date", 1), ("created_at", -1)])
+        await db.expense_entries.create_index([("user_id", 1), ("date", 1), ("created_at", -1)])
         logger.info("Database indexes created successfully")
     except Exception as e:
         logger.error(f"Error creating indexes: {e}")

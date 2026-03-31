@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, getDayName, getCurrentMonth, formatDateForInput } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -33,9 +33,6 @@ import {
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search, Download } from 'lucide-react';
 import { useDataRefresh } from '../context/DataContext';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 export const ExpensesPage = () => {
   const [expenses, setExpenses] = useState([]);
@@ -79,7 +76,7 @@ export const ExpensesPage = () => {
       if (filters.search) params.search = filters.search;
       if (filters.category_name) params.category_name = filters.category_name;
 
-      const response = await axios.get(`${API}/expenses`, { params });
+      const response = await api.get('/expenses', { params });
       setExpenses(response.data);
     } catch (error) {
       toast.error('Failed to fetch expense data');
@@ -90,7 +87,7 @@ export const ExpensesPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API}/suggestions/categories`);
+      const response = await api.get('/suggestions/categories');
       setCategories(response.data.suggestions);
     } catch (error) {
       console.error('Failed to fetch categories');
@@ -110,10 +107,10 @@ export const ExpensesPage = () => {
       console.log('Submitting expense:', editingItem ? 'UPDATE' : 'CREATE', formData);
       
       if (editingItem) {
-        const response = await axios.put(`${API}/expenses/${editingItem.id}`, formData);
+        const response = await api.put(`/expenses/${editingItem.id}`, formData);
         console.log('Update response:', response);
       } else {
-        const response = await axios.post(`${API}/expenses`, formData);
+        const response = await api.post('/expenses', formData);
         console.log('Create response:', response);
       }
       
@@ -156,7 +153,7 @@ export const ExpensesPage = () => {
     
     try {
       console.log('Deleting expense entry:', itemToDelete.id);
-      const response = await axios.delete(`${API}/expenses/${itemToDelete.id}`);
+      const response = await api.delete(`/expenses/${itemToDelete.id}`);
       console.log('Delete response:', response);
       toast.success('Expense entry deleted successfully');
       setDeleteDialogOpen(false);
@@ -194,7 +191,7 @@ export const ExpensesPage = () => {
 
   const handleExport = async () => {
     try {
-      const response = await axios.get(`${API}/export/expenses`, {
+      const response = await api.get('/export/expenses', {
         params: { month: filters.month },
         responseType: 'blob'
       });

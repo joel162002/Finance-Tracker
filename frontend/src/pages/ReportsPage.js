@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
 import { getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,6 @@ import {
   Legend
 } from 'recharts';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
 export const ReportsPage = () => {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +27,7 @@ export const ReportsPage = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/analytics/reports`, {
+      const response = await api.get('/analytics/reports', {
         params: { month: selectedMonth }
       });
       setReports(response.data);
