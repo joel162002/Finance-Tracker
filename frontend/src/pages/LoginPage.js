@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -123,7 +123,6 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       const response = await axios.post(`${API}/auth/forgot-password`, { email: resetEmail });
-      // For demo, we get the code back. In production, user would check email.
       if (response.data.demo_code) {
         setResetCode(response.data.demo_code);
       }
@@ -183,60 +182,93 @@ export const LoginPage = () => {
     setView(targetView);
   };
 
+  // Animated Background Component
+  const AnimatedBackground = () => (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Base gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900" />
+      
+      {/* Animated orbs */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" 
+           style={{ animationDuration: '4s' }} />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl animate-pulse" 
+           style={{ animationDuration: '5s', animationDelay: '1s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-3xl animate-pulse" 
+           style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      
+      {/* Grid overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+      
+      {/* Noise texture */}
+      <div className="absolute inset-0 opacity-20" 
+           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
+    </div>
+  );
+
+  // Input Component with better styling
+  const StyledInput = ({ id, type = 'text', placeholder, value, onChange, error, className = '', ...props }) => (
+    <input
+      id={id}
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off'}
+      className={`
+        w-full h-14 px-4 rounded-xl
+        bg-white/10 backdrop-blur-sm
+        border-2 ${error ? 'border-red-400/50' : 'border-white/10'}
+        text-white placeholder-white/40
+        text-base font-medium
+        outline-none
+        transition-all duration-300
+        focus:border-emerald-400/60 focus:bg-white/15 focus:ring-4 focus:ring-emerald-400/10
+        hover:border-white/20 hover:bg-white/12
+        ${className}
+      `}
+      {...props}
+    />
+  );
+
   // Landing View
   const LandingView = () => (
-    <div className="text-center px-2">
+    <div className="text-center">
       {/* Logo */}
-      <div className="mb-8">
+      <div className="mb-6">
         <img 
           src="/logo.png" 
           alt="KitaTracker" 
-          className="w-24 h-auto mx-auto"
+          className="w-20 h-auto mx-auto drop-shadow-2xl"
         />
       </div>
       
-      {/* Headline */}
-      <h1 className="text-xl sm:text-2xl font-semibold text-slate-800 mb-8 leading-relaxed tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
-        See your real income.<br />
-        Control your expenses.<br />
-        Grow your business with clarity.
+      {/* Headline with gradient text */}
+      <h1 className="text-xl font-bold mb-8 leading-relaxed">
+        <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
+          See your real income.
+        </span>
+        <br />
+        <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-300 bg-clip-text text-transparent">
+          Control your expenses.
+        </span>
+        <br />
+        <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
+          Grow your business with clarity.
+        </span>
       </h1>
-      
-      {/* Auth Options */}
-      <div className="space-y-2 mb-8">
-        <p className="text-sm text-slate-600">
-          Already have an account?{' '}
-          <button 
-            onClick={() => setView('signin')}
-            className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors underline underline-offset-2"
-          >
-            Sign in
-          </button>
-        </p>
-        <p className="text-sm text-slate-600">
-          Don't have an account?{' '}
-          <button 
-            onClick={() => setView('signup')}
-            className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors underline underline-offset-2"
-          >
-            Sign up
-          </button>
-        </p>
-      </div>
       
       {/* Divider */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="flex-1 h-px bg-slate-200"></div>
-        <span className="text-xs text-slate-400 uppercase tracking-widest font-medium">or</span>
-        <div className="flex-1 h-px bg-slate-200"></div>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+        <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">Get Started</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
       </div>
       
       {/* Auth Buttons */}
       <div className="space-y-3">
         <Button
           onClick={handleGoogleLogin}
-          variant="outline"
-          className="w-full h-14 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 font-medium text-slate-700"
+          className="w-full h-14 rounded-xl bg-white hover:bg-gray-100 text-slate-800 font-semibold transition-all duration-300 shadow-lg shadow-white/10 hover:shadow-white/20 hover:scale-[1.02]"
           data-testid="google-login-button"
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -250,7 +282,7 @@ export const LoginPage = () => {
         
         <Button
           onClick={() => setView('signin')}
-          className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all duration-200"
+          className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02]"
           data-testid="email-login-button"
         >
           <Mail className="w-5 h-5 mr-3" />
@@ -262,22 +294,24 @@ export const LoginPage = () => {
 
   // Sign In View
   const SignInView = () => (
-    <div className="px-2">
+    <div>
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Welcome back
+        <h1 className="text-2xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+            Welcome back
+          </span>
         </h1>
-        <p className="text-slate-500 text-sm">
+        <p className="text-white/50 text-sm">
           Sign in to manage your income and expenses.
         </p>
       </div>
       
       {/* Form */}
-      <form onSubmit={handleSignIn} className="space-y-5">
+      <form onSubmit={handleSignIn} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="signin-email" className="text-slate-700 font-medium text-sm">Email</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Email</label>
+          <StyledInput
             id="signin-email"
             type="email"
             placeholder="Enter your email"
@@ -286,16 +320,16 @@ export const LoginPage = () => {
               setSignInData({ ...signInData, email: e.target.value });
               setErrors({ ...errors, email: null, general: null });
             }}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base ${errors.email ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.email}
             data-testid="signin-email-input"
           />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="signin-password" className="text-slate-700 font-medium text-sm">Password</Label>
+          <label className="text-white/70 font-medium text-sm block">Password</label>
           <div className="relative">
-            <Input
+            <StyledInput
               id="signin-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
@@ -304,18 +338,19 @@ export const LoginPage = () => {
                 setSignInData({ ...signInData, password: e.target.value });
                 setErrors({ ...errors, password: null, general: null });
               }}
-              className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all pr-14 text-base ${errors.password ? 'border-red-400 focus:border-red-400' : ''}`}
+              error={errors.password}
+              className="pr-14"
               data-testid="signin-password-input"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-          {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+          {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
         </div>
         
         {/* Forgot Password */}
@@ -327,15 +362,15 @@ export const LoginPage = () => {
               setView('forgot');
               setErrors({});
             }}
-            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+            className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
           >
             Forgot password?
           </button>
         </div>
         
         {errors.general && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-            <p className="text-sm text-red-600">{errors.general}</p>
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+            <p className="text-sm text-red-400">{errors.general}</p>
           </div>
         )}
         
@@ -344,7 +379,7 @@ export const LoginPage = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all duration-200 disabled:opacity-70"
+            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
             data-testid="signin-submit-button"
           >
             {loading ? (
@@ -358,25 +393,39 @@ export const LoginPage = () => {
             type="button"
             variant="ghost"
             onClick={() => clearAndGoBack('landing')}
-            className="w-full h-12 rounded-2xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium transition-all duration-200"
+            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
         </div>
+        
+        {/* Sign Up Link */}
+        <p className="text-center text-sm text-white/50 pt-2">
+          Don't have an account?{' '}
+          <button 
+            type="button"
+            onClick={() => clearAndGoBack('signup')}
+            className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
+          >
+            Sign up
+          </button>
+        </p>
       </form>
     </div>
   );
 
   // Sign Up View
   const SignUpView = () => (
-    <div className="px-2">
+    <div>
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Create your account
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+            Create your account
+          </span>
         </h1>
-        <p className="text-slate-500 text-sm">
+        <p className="text-white/50 text-sm">
           Start tracking your income and expenses.
         </p>
       </div>
@@ -384,8 +433,8 @@ export const LoginPage = () => {
       {/* Form */}
       <form onSubmit={handleSignUp} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="signup-username" className="text-slate-700 font-medium text-sm">Username</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Username</label>
+          <StyledInput
             id="signup-username"
             type="text"
             placeholder="Enter your username"
@@ -394,15 +443,15 @@ export const LoginPage = () => {
               setSignUpData({ ...signUpData, username: e.target.value });
               setErrors({ ...errors, username: null, general: null });
             }}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base ${errors.username ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.username}
             data-testid="signup-username-input"
           />
-          {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
+          {errors.username && <p className="text-xs text-red-400 mt-1">{errors.username}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="signup-email" className="text-slate-700 font-medium text-sm">Email</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Email</label>
+          <StyledInput
             id="signup-email"
             type="email"
             placeholder="Enter your email"
@@ -411,16 +460,16 @@ export const LoginPage = () => {
               setSignUpData({ ...signUpData, email: e.target.value });
               setErrors({ ...errors, email: null, general: null });
             }}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base ${errors.email ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.email}
             data-testid="signup-email-input"
           />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="signup-password" className="text-slate-700 font-medium text-sm">Password</Label>
+          <label className="text-white/70 font-medium text-sm block">Password</label>
           <div className="relative">
-            <Input
+            <StyledInput
               id="signup-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a password"
@@ -429,24 +478,25 @@ export const LoginPage = () => {
                 setSignUpData({ ...signUpData, password: e.target.value });
                 setErrors({ ...errors, password: null, general: null });
               }}
-              className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all pr-14 text-base ${errors.password ? 'border-red-400 focus:border-red-400' : ''}`}
+              error={errors.password}
+              className="pr-14"
               data-testid="signup-password-input"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-          <p className="text-xs text-slate-400">Must be at least 6 characters</p>
-          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+          <p className="text-xs text-white/30">Must be at least 6 characters</p>
+          {errors.password && <p className="text-xs text-red-400">{errors.password}</p>}
         </div>
         
         {errors.general && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-            <p className="text-sm text-red-600">{errors.general}</p>
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+            <p className="text-sm text-red-400">{errors.general}</p>
           </div>
         )}
         
@@ -455,7 +505,7 @@ export const LoginPage = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all duration-200 disabled:opacity-70"
+            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
             data-testid="signup-submit-button"
           >
             {loading ? (
@@ -469,37 +519,51 @@ export const LoginPage = () => {
             type="button"
             variant="ghost"
             onClick={() => clearAndGoBack('landing')}
-            className="w-full h-12 rounded-2xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium transition-all duration-200"
+            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
         </div>
+        
+        {/* Sign In Link */}
+        <p className="text-center text-sm text-white/50 pt-2">
+          Already have an account?{' '}
+          <button 
+            type="button"
+            onClick={() => clearAndGoBack('signin')}
+            className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
+          >
+            Sign in
+          </button>
+        </p>
       </form>
     </div>
   );
 
   // Forgot Password View
   const ForgotPasswordView = () => (
-    <div className="px-2">
+    <div>
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail className="w-8 h-8 text-emerald-600" />
+        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+          <Mail className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Forgot password?
+        <h1 className="text-2xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+            Forgot password?
+          </span>
         </h1>
-        <p className="text-slate-500 text-sm">
+        <p className="text-white/50 text-sm">
           Enter your email and we'll send you a reset code.
         </p>
       </div>
       
       {/* Form */}
-      <form onSubmit={handleForgotPassword} className="space-y-5">
+      <form onSubmit={handleForgotPassword} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="forgot-email" className="text-slate-700 font-medium text-sm">Email</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Email</label>
+          <StyledInput
             id="forgot-email"
             type="email"
             placeholder="Enter your email"
@@ -508,10 +572,10 @@ export const LoginPage = () => {
               setResetEmail(e.target.value);
               setErrors({ ...errors, email: null });
             }}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base ${errors.email ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.email}
             data-testid="forgot-email-input"
           />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
         </div>
         
         {/* Buttons */}
@@ -519,7 +583,7 @@ export const LoginPage = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all duration-200 disabled:opacity-70"
+            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
             data-testid="forgot-submit-button"
           >
             {loading ? (
@@ -533,7 +597,7 @@ export const LoginPage = () => {
             type="button"
             variant="ghost"
             onClick={() => clearAndGoBack('signin')}
-            className="w-full h-12 rounded-2xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium transition-all duration-200"
+            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Sign In
@@ -545,22 +609,24 @@ export const LoginPage = () => {
 
   // Reset Password View
   const ResetPasswordView = () => (
-    <div className="px-2">
+    <div>
       {/* Header */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="w-8 h-8 text-emerald-600" />
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+          <CheckCircle className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Reset your password
+        <h1 className="text-2xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+            Reset your password
+          </span>
         </h1>
-        <p className="text-slate-500 text-sm">
-          Enter the code sent to <span className="font-medium text-slate-700">{resetEmail}</span>
+        <p className="text-white/50 text-sm">
+          Enter the code sent to <span className="text-white/70 font-medium">{resetEmail}</span>
         </p>
         {resetCode && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-700">
-              Demo mode: Your reset code is <span className="font-mono font-bold">{resetCode}</span>
+          <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+            <p className="text-xs text-amber-300">
+              Demo: Your code is <span className="font-mono font-bold text-amber-200">{resetCode}</span>
             </p>
           </div>
         )}
@@ -569,8 +635,8 @@ export const LoginPage = () => {
       {/* Form */}
       <form onSubmit={handleResetPassword} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="reset-code" className="text-slate-700 font-medium text-sm">Reset Code</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Reset Code</label>
+          <StyledInput
             id="reset-code"
             type="text"
             placeholder="Enter 6-digit code"
@@ -580,16 +646,17 @@ export const LoginPage = () => {
               setErrors({ ...errors, code: null, general: null });
             }}
             maxLength={6}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base text-center tracking-[0.5em] font-mono ${errors.code ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.code}
+            className="text-center tracking-[0.5em] font-mono"
             data-testid="reset-code-input"
           />
-          {errors.code && <p className="text-xs text-red-500 mt-1">{errors.code}</p>}
+          {errors.code && <p className="text-xs text-red-400 mt-1">{errors.code}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="new-password" className="text-slate-700 font-medium text-sm">New Password</Label>
+          <label className="text-white/70 font-medium text-sm block">New Password</label>
           <div className="relative">
-            <Input
+            <StyledInput
               id="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a new password"
@@ -598,23 +665,24 @@ export const LoginPage = () => {
                 setResetData({ ...resetData, newPassword: e.target.value });
                 setErrors({ ...errors, newPassword: null, general: null });
               }}
-              className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all pr-14 text-base ${errors.newPassword ? 'border-red-400 focus:border-red-400' : ''}`}
+              error={errors.newPassword}
+              className="pr-14"
               data-testid="new-password-input"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-          {errors.newPassword && <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>}
+          {errors.newPassword && <p className="text-xs text-red-400 mt-1">{errors.newPassword}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="confirm-password" className="text-slate-700 font-medium text-sm">Confirm Password</Label>
-          <Input
+          <label className="text-white/70 font-medium text-sm block">Confirm Password</label>
+          <StyledInput
             id="confirm-password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Confirm your new password"
@@ -623,15 +691,15 @@ export const LoginPage = () => {
               setResetData({ ...resetData, confirmPassword: e.target.value });
               setErrors({ ...errors, confirmPassword: null, general: null });
             }}
-            className={`h-14 rounded-2xl bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-base ${errors.confirmPassword ? 'border-red-400 focus:border-red-400' : ''}`}
+            error={errors.confirmPassword}
             data-testid="confirm-password-input"
           />
-          {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>}
+          {errors.confirmPassword && <p className="text-xs text-red-400 mt-1">{errors.confirmPassword}</p>}
         </div>
         
         {errors.general && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-            <p className="text-sm text-red-600">{errors.general}</p>
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+            <p className="text-sm text-red-400">{errors.general}</p>
           </div>
         )}
         
@@ -640,7 +708,7 @@ export const LoginPage = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all duration-200 disabled:opacity-70"
+            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
             data-testid="reset-submit-button"
           >
             {loading ? (
@@ -658,7 +726,7 @@ export const LoginPage = () => {
               setResetData({ code: '', newPassword: '', confirmPassword: '' });
               setErrors({});
             }}
-            className="w-full h-12 rounded-2xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium transition-all duration-200"
+            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Try Different Email
@@ -669,16 +737,12 @@ export const LoginPage = () => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-100 via-white to-emerald-50/50">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <AnimatedBackground />
       
       {/* Card */}
       <div className="relative w-full max-w-sm">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+        <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/40 border border-white/10">
           {view === 'landing' && <LandingView />}
           {view === 'signin' && <SignInView />}
           {view === 'signup' && <SignUpView />}
@@ -687,7 +751,7 @@ export const LoginPage = () => {
         </div>
         
         {/* Footer */}
-        <p className="text-center text-xs text-slate-400 mt-6 px-4">
+        <p className="text-center text-xs text-white/30 mt-6 px-4">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
