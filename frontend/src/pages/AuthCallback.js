@@ -39,13 +39,22 @@ export const AuthCallback = () => {
         console.log('Auth callback - response:', response.data);
         
         const { user, token } = response.data;
+        console.log('Auth callback - token:', token);
+        console.log('Auth callback - user:', user);
         
-        // Login user
+        // Login user - this saves to localStorage and updates React state
         login(user, token);
         
-        // Clear the hash and redirect to dashboard
+        // Also directly set localStorage as backup (in case state update is slow)
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Clear the hash 
         window.history.replaceState(null, '', '/dashboard');
         toast.success(`Welcome, ${user.name || user.email}!`);
+        
+        // Small delay to ensure state propagation, then navigate
+        await new Promise(resolve => setTimeout(resolve, 100));
         navigate('/dashboard', { replace: true });
         
       } catch (error) {
