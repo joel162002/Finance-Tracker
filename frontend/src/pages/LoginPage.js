@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ArrowRight, ArrowLeft, Mail, Eye, EyeOff, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
@@ -11,42 +9,133 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Move StyledInput OUTSIDE the component to prevent re-creation on every render
+const StyledInput = memo(({ id, type = 'text', placeholder, value, onChange, error, className = '', ...props }) => (
+  <input
+    id={id}
+    type={type}
+    placeholder={placeholder}
+    value={value}
+    onChange={onChange}
+    autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off'}
+    autoCapitalize="off"
+    autoCorrect="off"
+    spellCheck="false"
+    className={`
+      w-full h-14 px-4 rounded-xl
+      bg-white/10 backdrop-blur-sm
+      border-2 ${error ? 'border-red-400/50' : 'border-white/10'}
+      text-white placeholder-white/40
+      text-base font-medium
+      outline-none
+      transition-all duration-300
+      focus:border-emerald-400/60 focus:bg-white/15 focus:ring-4 focus:ring-emerald-400/10
+      hover:border-white/20 hover:bg-white/12
+      ${className}
+    `}
+    {...props}
+  />
+));
+
+StyledInput.displayName = 'StyledInput';
+
+// Animated Background Component - also moved outside
+const AnimatedBackground = memo(() => (
+  <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900" />
+    <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" 
+         style={{ animationDuration: '4s' }} />
+    <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl animate-pulse" 
+         style={{ animationDuration: '5s', animationDelay: '1s' }} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-3xl animate-pulse" 
+         style={{ animationDuration: '6s', animationDelay: '2s' }} />
+    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+    <div className="absolute inset-0 opacity-20" 
+         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
+  </div>
+));
+
+AnimatedBackground.displayName = 'AnimatedBackground';
+
 export const LoginPage = () => {
-  const [view, setView] = useState('landing'); // 'landing', 'signin', 'signup', 'forgot', 'reset'
+  const [view, setView] = useState('landing');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetCode, setResetCode] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   
-  // Sign In form
-  const [signInData, setSignInData] = useState({
-    email: '',
-    password: ''
-  });
-  
-  // Sign Up form
-  const [signUpData, setSignUpData] = useState({
-    username: '',
-    email: '',
-    password: ''
-  });
-  
-  // Reset Password form
-  const [resetData, setResetData] = useState({
-    code: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  
+  // Use single object state to reduce re-renders
+  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ username: '', email: '', password: '' });
+  const [resetData, setResetData] = useState({ code: '', newPassword: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
+  
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  const handleGoogleLogin = () => {
+  // Memoized handlers to prevent re-creation
+  const handleSignInEmailChange = useCallback((e) => {
+    const value = e.target.value;
+    setSignInData(prev => ({ ...prev, email: value }));
+    setErrors(prev => ({ ...prev, email: null, general: null }));
+  }, []);
+
+  const handleSignInPasswordChange = useCallback((e) => {
+    const value = e.target.value;
+    setSignInData(prev => ({ ...prev, password: value }));
+    setErrors(prev => ({ ...prev, password: null, general: null }));
+  }, []);
+
+  const handleSignUpUsernameChange = useCallback((e) => {
+    const value = e.target.value;
+    setSignUpData(prev => ({ ...prev, username: value }));
+    setErrors(prev => ({ ...prev, username: null, general: null }));
+  }, []);
+
+  const handleSignUpEmailChange = useCallback((e) => {
+    const value = e.target.value;
+    setSignUpData(prev => ({ ...prev, email: value }));
+    setErrors(prev => ({ ...prev, email: null, general: null }));
+  }, []);
+
+  const handleSignUpPasswordChange = useCallback((e) => {
+    const value = e.target.value;
+    setSignUpData(prev => ({ ...prev, password: value }));
+    setErrors(prev => ({ ...prev, password: null, general: null }));
+  }, []);
+
+  const handleResetEmailChange = useCallback((e) => {
+    const value = e.target.value;
+    setResetEmail(value);
+    setErrors(prev => ({ ...prev, email: null }));
+  }, []);
+
+  const handleResetCodeChange = useCallback((e) => {
+    const value = e.target.value;
+    setResetData(prev => ({ ...prev, code: value }));
+    setErrors(prev => ({ ...prev, code: null, general: null }));
+  }, []);
+
+  const handleResetNewPasswordChange = useCallback((e) => {
+    const value = e.target.value;
+    setResetData(prev => ({ ...prev, newPassword: value }));
+    setErrors(prev => ({ ...prev, newPassword: null, general: null }));
+  }, []);
+
+  const handleResetConfirmPasswordChange = useCallback((e) => {
+    const value = e.target.value;
+    setResetData(prev => ({ ...prev, confirmPassword: value }));
+    setErrors(prev => ({ ...prev, confirmPassword: null, general: null }));
+  }, []);
+
+  const toggleShowPassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
+
+  const handleGoogleLogin = useCallback(() => {
     const redirectUrl = window.location.origin + '/dashboard';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
+  }, []);
 
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
 
@@ -174,75 +263,31 @@ export const LoginPage = () => {
     }
   };
 
-  const clearAndGoBack = (targetView) => {
+  const clearAndGoBack = useCallback((targetView) => {
     setErrors({});
     setSignInData({ email: '', password: '' });
     setSignUpData({ username: '', email: '', password: '' });
     setResetData({ code: '', newPassword: '', confirmPassword: '' });
     setView(targetView);
-  };
+  }, []);
 
-  // Animated Background Component
-  const AnimatedBackground = () => (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Base gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900" />
-      
-      {/* Animated orbs */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" 
-           style={{ animationDuration: '4s' }} />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl animate-pulse" 
-           style={{ animationDuration: '5s', animationDelay: '1s' }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-3xl animate-pulse" 
-           style={{ animationDuration: '6s', animationDelay: '2s' }} />
-      
-      {/* Grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
-      
-      {/* Noise texture */}
-      <div className="absolute inset-0 opacity-20" 
-           style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
-    </div>
-  );
-
-  // Input Component with better styling
-  const StyledInput = ({ id, type = 'text', placeholder, value, onChange, error, className = '', ...props }) => (
-    <input
-      id={id}
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off'}
-      className={`
-        w-full h-14 px-4 rounded-xl
-        bg-white/10 backdrop-blur-sm
-        border-2 ${error ? 'border-red-400/50' : 'border-white/10'}
-        text-white placeholder-white/40
-        text-base font-medium
-        outline-none
-        transition-all duration-300
-        focus:border-emerald-400/60 focus:bg-white/15 focus:ring-4 focus:ring-emerald-400/10
-        hover:border-white/20 hover:bg-white/12
-        ${className}
-      `}
-      {...props}
-    />
-  );
+  const goToSignIn = useCallback(() => setView('signin'), []);
+  const goToSignUp = useCallback(() => setView('signup'), []);
+  const goToForgot = useCallback(() => {
+    setResetEmail(signInData.email);
+    setView('forgot');
+    setErrors({});
+  }, [signInData.email]);
+  const goToLanding = useCallback(() => clearAndGoBack('landing'), [clearAndGoBack]);
+  const goBackToSignIn = useCallback(() => clearAndGoBack('signin'), [clearAndGoBack]);
 
   // Landing View
   const LandingView = () => (
     <div className="text-center">
-      {/* Logo */}
       <div className="mb-6">
-        <img 
-          src="/logo.png" 
-          alt="KitaTracker" 
-          className="w-20 h-auto mx-auto drop-shadow-2xl"
-        />
+        <img src="/logo.png" alt="KitaTracker" className="w-20 h-auto mx-auto drop-shadow-2xl" />
       </div>
       
-      {/* Headline with gradient text */}
       <h1 className="text-xl font-bold mb-8 leading-relaxed">
         <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
           See your real income.
@@ -257,14 +302,12 @@ export const LoginPage = () => {
         </span>
       </h1>
       
-      {/* Divider */}
       <div className="flex items-center gap-4 mb-6">
         <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
         <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">Get Started</span>
         <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
       </div>
       
-      {/* Auth Buttons */}
       <div className="space-y-3">
         <Button
           onClick={handleGoogleLogin}
@@ -281,7 +324,7 @@ export const LoginPage = () => {
         </Button>
         
         <Button
-          onClick={() => setView('signin')}
+          onClick={goToSignIn}
           className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02]"
           data-testid="email-login-button"
         >
@@ -295,19 +338,13 @@ export const LoginPage = () => {
   // Sign In View
   const SignInView = () => (
     <div>
-      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold mb-2">
-          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
-            Welcome back
-          </span>
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">Welcome back</span>
         </h1>
-        <p className="text-white/50 text-sm">
-          Sign in to manage your income and expenses.
-        </p>
+        <p className="text-white/50 text-sm">Sign in to manage your income and expenses.</p>
       </div>
       
-      {/* Form */}
       <form onSubmit={handleSignIn} className="space-y-4">
         <div className="space-y-2">
           <label className="text-white/70 font-medium text-sm block">Email</label>
@@ -316,10 +353,7 @@ export const LoginPage = () => {
             type="email"
             placeholder="Enter your email"
             value={signInData.email}
-            onChange={(e) => {
-              setSignInData({ ...signInData, email: e.target.value });
-              setErrors({ ...errors, email: null, general: null });
-            }}
+            onChange={handleSignInEmailChange}
             error={errors.email}
             data-testid="signin-email-input"
           />
@@ -334,17 +368,14 @@ export const LoginPage = () => {
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               value={signInData.password}
-              onChange={(e) => {
-                setSignInData({ ...signInData, password: e.target.value });
-                setErrors({ ...errors, password: null, general: null });
-              }}
+              onChange={handleSignInPasswordChange}
               error={errors.password}
               className="pr-14"
               data-testid="signin-password-input"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={toggleShowPassword}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -353,17 +384,8 @@ export const LoginPage = () => {
           {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
         </div>
         
-        {/* Forgot Password */}
         <div className="text-right">
-          <button 
-            type="button"
-            onClick={() => {
-              setResetEmail(signInData.email);
-              setView('forgot');
-              setErrors({});
-            }}
-            className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
-          >
+          <button type="button" onClick={goToForgot} className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
             Forgot password?
           </button>
         </div>
@@ -374,42 +396,19 @@ export const LoginPage = () => {
           </div>
         )}
         
-        {/* Buttons */}
         <div className="space-y-3 pt-2">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-            data-testid="signin-submit-button"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>Log in <ArrowRight className="w-4 h-4 ml-2" /></>
-            )}
+          <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50" data-testid="signin-submit-button">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Log in <ArrowRight className="w-4 h-4 ml-2" /></>}
           </Button>
           
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => clearAndGoBack('landing')}
-            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
+          <Button type="button" variant="ghost" onClick={goToLanding} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
           </Button>
         </div>
         
-        {/* Sign Up Link */}
         <p className="text-center text-sm text-white/50 pt-2">
           Don't have an account?{' '}
-          <button 
-            type="button"
-            onClick={() => clearAndGoBack('signup')}
-            className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
-          >
-            Sign up
-          </button>
+          <button type="button" onClick={() => clearAndGoBack('signup')} className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">Sign up</button>
         </p>
       </form>
     </div>
@@ -418,19 +417,13 @@ export const LoginPage = () => {
   // Sign Up View
   const SignUpView = () => (
     <div>
-      {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold mb-2">
-          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
-            Create your account
-          </span>
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">Create your account</span>
         </h1>
-        <p className="text-white/50 text-sm">
-          Start tracking your income and expenses.
-        </p>
+        <p className="text-white/50 text-sm">Start tracking your income and expenses.</p>
       </div>
       
-      {/* Form */}
       <form onSubmit={handleSignUp} className="space-y-4">
         <div className="space-y-2">
           <label className="text-white/70 font-medium text-sm block">Username</label>
@@ -439,10 +432,7 @@ export const LoginPage = () => {
             type="text"
             placeholder="Enter your username"
             value={signUpData.username}
-            onChange={(e) => {
-              setSignUpData({ ...signUpData, username: e.target.value });
-              setErrors({ ...errors, username: null, general: null });
-            }}
+            onChange={handleSignUpUsernameChange}
             error={errors.username}
             data-testid="signup-username-input"
           />
@@ -456,10 +446,7 @@ export const LoginPage = () => {
             type="email"
             placeholder="Enter your email"
             value={signUpData.email}
-            onChange={(e) => {
-              setSignUpData({ ...signUpData, email: e.target.value });
-              setErrors({ ...errors, email: null, general: null });
-            }}
+            onChange={handleSignUpEmailChange}
             error={errors.email}
             data-testid="signup-email-input"
           />
@@ -474,19 +461,12 @@ export const LoginPage = () => {
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a password"
               value={signUpData.password}
-              onChange={(e) => {
-                setSignUpData({ ...signUpData, password: e.target.value });
-                setErrors({ ...errors, password: null, general: null });
-              }}
+              onChange={handleSignUpPasswordChange}
               error={errors.password}
               className="pr-14"
               data-testid="signup-password-input"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
-            >
+            <button type="button" onClick={toggleShowPassword} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1">
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
@@ -500,42 +480,19 @@ export const LoginPage = () => {
           </div>
         )}
         
-        {/* Buttons */}
         <div className="space-y-3 pt-2">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-            data-testid="signup-submit-button"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>Get started <ArrowRight className="w-4 h-4 ml-2" /></>
-            )}
+          <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50" data-testid="signup-submit-button">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Get started <ArrowRight className="w-4 h-4 ml-2" /></>}
           </Button>
           
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => clearAndGoBack('landing')}
-            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
+          <Button type="button" variant="ghost" onClick={goToLanding} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
           </Button>
         </div>
         
-        {/* Sign In Link */}
         <p className="text-center text-sm text-white/50 pt-2">
           Already have an account?{' '}
-          <button 
-            type="button"
-            onClick={() => clearAndGoBack('signin')}
-            className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
-          >
-            Sign in
-          </button>
+          <button type="button" onClick={() => clearAndGoBack('signin')} className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">Sign in</button>
         </p>
       </form>
     </div>
@@ -544,22 +501,16 @@ export const LoginPage = () => {
   // Forgot Password View
   const ForgotPasswordView = () => (
     <div>
-      {/* Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
           <Mail className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-2xl font-bold mb-2">
-          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
-            Forgot password?
-          </span>
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">Forgot password?</span>
         </h1>
-        <p className="text-white/50 text-sm">
-          Enter your email and we'll send you a reset code.
-        </p>
+        <p className="text-white/50 text-sm">Enter your email and we'll send you a reset code.</p>
       </div>
       
-      {/* Form */}
       <form onSubmit={handleForgotPassword} className="space-y-4">
         <div className="space-y-2">
           <label className="text-white/70 font-medium text-sm block">Email</label>
@@ -568,39 +519,20 @@ export const LoginPage = () => {
             type="email"
             placeholder="Enter your email"
             value={resetEmail}
-            onChange={(e) => {
-              setResetEmail(e.target.value);
-              setErrors({ ...errors, email: null });
-            }}
+            onChange={handleResetEmailChange}
             error={errors.email}
             data-testid="forgot-email-input"
           />
           {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
         </div>
         
-        {/* Buttons */}
         <div className="space-y-3 pt-2">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-            data-testid="forgot-submit-button"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>Send Reset Code <ArrowRight className="w-4 h-4 ml-2" /></>
-            )}
+          <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50" data-testid="forgot-submit-button">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Send Reset Code <ArrowRight className="w-4 h-4 ml-2" /></>}
           </Button>
           
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => clearAndGoBack('signin')}
-            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Sign In
+          <Button type="button" variant="ghost" onClick={goBackToSignIn} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Sign In
           </Button>
         </div>
       </form>
@@ -610,29 +542,21 @@ export const LoginPage = () => {
   // Reset Password View
   const ResetPasswordView = () => (
     <div>
-      {/* Header */}
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
           <CheckCircle className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-2xl font-bold mb-2">
-          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
-            Reset your password
-          </span>
+          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">Reset your password</span>
         </h1>
-        <p className="text-white/50 text-sm">
-          Enter the code sent to <span className="text-white/70 font-medium">{resetEmail}</span>
-        </p>
+        <p className="text-white/50 text-sm">Enter the code sent to <span className="text-white/70 font-medium">{resetEmail}</span></p>
         {resetCode && (
           <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-            <p className="text-xs text-amber-300">
-              Demo: Your code is <span className="font-mono font-bold text-amber-200">{resetCode}</span>
-            </p>
+            <p className="text-xs text-amber-300">Demo: Your code is <span className="font-mono font-bold text-amber-200">{resetCode}</span></p>
           </div>
         )}
       </div>
       
-      {/* Form */}
       <form onSubmit={handleResetPassword} className="space-y-4">
         <div className="space-y-2">
           <label className="text-white/70 font-medium text-sm block">Reset Code</label>
@@ -641,10 +565,7 @@ export const LoginPage = () => {
             type="text"
             placeholder="Enter 6-digit code"
             value={resetData.code}
-            onChange={(e) => {
-              setResetData({ ...resetData, code: e.target.value });
-              setErrors({ ...errors, code: null, general: null });
-            }}
+            onChange={handleResetCodeChange}
             maxLength={6}
             error={errors.code}
             className="text-center tracking-[0.5em] font-mono"
@@ -661,19 +582,12 @@ export const LoginPage = () => {
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a new password"
               value={resetData.newPassword}
-              onChange={(e) => {
-                setResetData({ ...resetData, newPassword: e.target.value });
-                setErrors({ ...errors, newPassword: null, general: null });
-              }}
+              onChange={handleResetNewPasswordChange}
               error={errors.newPassword}
               className="pr-14"
               data-testid="new-password-input"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1"
-            >
+            <button type="button" onClick={toggleShowPassword} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors p-1">
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
@@ -687,10 +601,7 @@ export const LoginPage = () => {
             type={showPassword ? 'text' : 'password'}
             placeholder="Confirm your new password"
             value={resetData.confirmPassword}
-            onChange={(e) => {
-              setResetData({ ...resetData, confirmPassword: e.target.value });
-              setErrors({ ...errors, confirmPassword: null, general: null });
-            }}
+            onChange={handleResetConfirmPasswordChange}
             error={errors.confirmPassword}
             data-testid="confirm-password-input"
           />
@@ -703,33 +614,13 @@ export const LoginPage = () => {
           </div>
         )}
         
-        {/* Buttons */}
         <div className="space-y-3 pt-2">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
-            data-testid="reset-submit-button"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>Reset Password <ArrowRight className="w-4 h-4 ml-2" /></>
-            )}
+          <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50" data-testid="reset-submit-button">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Reset Password <ArrowRight className="w-4 h-4 ml-2" /></>}
           </Button>
           
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setView('forgot');
-              setResetData({ code: '', newPassword: '', confirmPassword: '' });
-              setErrors({});
-            }}
-            className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Try Different Email
+          <Button type="button" variant="ghost" onClick={() => { setView('forgot'); setResetData({ code: '', newPassword: '', confirmPassword: '' }); setErrors({}); }} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Try Different Email
           </Button>
         </div>
       </form>
@@ -740,7 +631,6 @@ export const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <AnimatedBackground />
       
-      {/* Card */}
       <div className="relative w-full max-w-sm">
         <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/40 border border-white/10">
           {view === 'landing' && <LandingView />}
@@ -750,7 +640,6 @@ export const LoginPage = () => {
           {view === 'reset' && <ResetPasswordView />}
         </div>
         
-        {/* Footer */}
         <p className="text-center text-xs text-white/30 mt-6 px-4">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
