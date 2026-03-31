@@ -33,6 +33,9 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [resetCode, setResetCode] = useState('');
   const [resetEmail, setResetEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [demoVerificationCode, setDemoVerificationCode] = useState('');
   
   // Form data as simple state
   const [signInEmail, setSignInEmail] = useState('');
@@ -43,6 +46,7 @@ export const LoginPage = () => {
   const [resetCodeInput, setResetCodeInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCodeInput, setVerificationCodeInput] = useState('');
   const [errors, setErrors] = useState({});
   
   const { login } = useAuth();
@@ -106,13 +110,82 @@ export const LoginPage = () => {
         email: signUpEmail,
         password: signUpPassword
       });
-      login(response.data.user, response.data.token);
-      toast.success('Account created! Welcome to KitaTracker.');
-      navigate('/dashboard');
+      
+      // Store token and user for later (after verification)
+      localStorage.setItem('pending_token', response.data.token);
+      localStorage.setItem('pending_user', JSON.stringify(response.data.user));
+      
+      // Check if email verification is required
+      if (response.data.requires_verification) {
+        setPendingVerificationEmail(signUpEmail);
+        if (response.data.demo_verification_code) {
+          setDemoVerificationCode(response.data.demo_verification_code);
+        }
+        toast.success('Account created! Please verify your email.');
+        setView('verify');
+      } else {
+        // No verification needed (shouldn't happen with new flow)
+        login(response.data.user, response.data.token);
+        toast.success('Account created! Welcome to KitaTracker.');
+        navigate('/dashboard');
+      }
     } catch (error) {
       const message = error.response?.data?.detail || 'Registration failed. Please try again.';
       toast.error(message);
       setErrors({ general: message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async (e) => {
+    e.preventDefault();
+    if (!verificationCodeInput || verificationCodeInput.length !== 6) {
+      setErrors({ code: 'Please enter the 6-digit code' });
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/verify-email`, {
+        email: pendingVerificationEmail,
+        verification_code: verificationCodeInput
+      });
+      
+      // Get stored credentials and login
+      const token = localStorage.getItem('pending_token');
+      const user = JSON.parse(localStorage.getItem('pending_user') || '{}');
+      
+      // Update user with verified status
+      user.email_verified = true;
+      
+      localStorage.removeItem('pending_token');
+      localStorage.removeItem('pending_user');
+      
+      login(user, token);
+      toast.success('Email verified! Welcome to KitaTracker.');
+      navigate('/dashboard');
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Invalid verification code';
+      toast.error(message);
+      setErrors({ code: message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/send-verification`, {
+        email: pendingVerificationEmail
+      });
+      if (response.data.demo_verification_code) {
+        setDemoVerificationCode(response.data.demo_verification_code);
+      }
+      toast.success('Verification code sent!');
+    } catch (error) {
+      toast.error('Failed to send verification code');
     } finally {
       setLoading(false);
     }
@@ -570,6 +643,57 @@ export const LoginPage = () => {
                   
                   <Button type="button" variant="ghost" onClick={() => { setView('forgot'); setResetCodeInput(''); setNewPassword(''); setConfirmPassword(''); setErrors({}); }} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Try Different Email
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Email Verification View */}
+          {view === 'verify' && (
+            <div>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                  <Mail className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">
+                  <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">Verify your email</span>
+                </h1>
+                <p className="text-white/50 text-sm">Enter the 6-digit code sent to <span className="text-white/70 font-medium">{pendingVerificationEmail}</span></p>
+                {demoVerificationCode && (
+                  <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <p className="text-xs text-amber-300">Demo: Your code is <span className="font-mono font-bold text-amber-200">{demoVerificationCode}</span></p>
+                  </div>
+                )}
+              </div>
+              
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-white/70 font-medium text-sm block">Verification Code</label>
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={verificationCodeInput}
+                    onChange={(e) => { setVerificationCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors(prev => ({ ...prev, code: null })); }}
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    className={`${inputClasses(errors.code)} text-center tracking-[0.5em] font-mono`}
+                    data-testid="verification-code-input"
+                  />
+                  {errors.code && <p className="text-xs text-red-400 mt-1">{errors.code}</p>}
+                </div>
+                
+                <div className="space-y-3 pt-2">
+                  <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold transition-all duration-300 shadow-lg shadow-emerald-500/30 disabled:opacity-50" data-testid="verify-submit-button">
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify Email <CheckCircle className="w-4 h-4 ml-2" /></>}
+                  </Button>
+                  
+                  <Button type="button" variant="ghost" onClick={handleResendVerification} disabled={loading} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+                    Resend Code
+                  </Button>
+                  
+                  <Button type="button" variant="ghost" onClick={() => clearAndGoTo('landing')} className="w-full h-12 rounded-xl text-white/50 hover:text-white hover:bg-white/5 font-medium transition-all duration-200">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Start Over
                   </Button>
                 </div>
               </form>

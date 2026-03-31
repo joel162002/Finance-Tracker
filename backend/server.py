@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 import re
 import io
 import csv
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -141,6 +142,7 @@ class IncomeEntry(BaseModel):
     date: str
     day: str
     amount: float
+    currency: str = "PHP"
     product_name: str
     person_name: str
     notes: Optional[str] = ""
@@ -153,6 +155,7 @@ class IncomeEntryCreate(BaseModel):
     date: str
     day: str
     amount: float
+    currency: str = "PHP"
     product_name: str
     person_name: str
     notes: Optional[str] = ""
@@ -163,6 +166,7 @@ class IncomeEntryUpdate(BaseModel):
     date: Optional[str] = None
     day: Optional[str] = None
     amount: Optional[float] = None
+    currency: Optional[str] = None
     product_name: Optional[str] = None
     person_name: Optional[str] = None
     notes: Optional[str] = None
@@ -176,6 +180,7 @@ class ExpenseEntry(BaseModel):
     date: str
     day: str
     amount: float
+    currency: str = "PHP"
     description: str
     category_name: str
     notes: Optional[str] = ""
@@ -188,6 +193,7 @@ class ExpenseEntryCreate(BaseModel):
     date: str
     day: str
     amount: float
+    currency: str = "PHP"
     description: str
     category_name: str
     notes: Optional[str] = ""
@@ -198,11 +204,20 @@ class ExpenseEntryUpdate(BaseModel):
     date: Optional[str] = None
     day: Optional[str] = None
     amount: Optional[float] = None
+    currency: Optional[str] = None
     description: Optional[str] = None
     category_name: Optional[str] = None
     notes: Optional[str] = None
     payment_method: Optional[str] = None
     reference_number: Optional[str] = None
+
+# Supported currencies
+SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "JPY", "CNY", "KRW", "SGD", "AUD", "CAD"]
+
+class UserSettings(BaseModel):
+    user_id: str
+    default_currency: str = "PHP"
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ParsedEntry(BaseModel):
     type: str
@@ -231,6 +246,13 @@ class ResetPasswordRequest(BaseModel):
     reset_code: str
     new_password: str
 
+class SendVerificationRequest(BaseModel):
+    email: str
+
+class VerifyEmailRequest(BaseModel):
+    email: str
+    verification_code: str
+
 @api_router.post("/auth/register")
 async def register(request: RegisterRequest):
     # Check if email already exists
@@ -247,7 +269,10 @@ async def register(request: RegisterRequest):
     if len(request.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     
-    # Create new user with clean slate - NO demo data inheritance
+    # Generate verification code
+    verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    # Create new user with email_verified = False
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     new_user = {
         "id": user_id,
@@ -256,8 +281,8 @@ async def register(request: RegisterRequest):
         "email": request.email,
         "password": request.password,
         "name": request.username,
+        "email_verified": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        # Initialize with zero stats
         "total_income": 0,
         "total_expenses": 0,
         "net_profit": 0
@@ -265,12 +290,99 @@ async def register(request: RegisterRequest):
     
     await db.users.insert_one(new_user)
     
+    # Store verification code
+    await db.email_verifications.delete_many({"email": request.email})
+    await db.email_verifications.insert_one({
+        "email": request.email,
+        "verification_code": verification_code,
+        "user_id": user_id,
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15)
+    })
+    
+    logger.info(f"Email verification code for {request.email}: {verification_code}")
+    
     # Remove password from response
     user_response = {k: v for k, v in new_user.items() if k not in ["password", "_id"]}
     
     return {
         "token": f"token-{user_id}",
-        "user": user_response
+        "user": user_response,
+        "requires_verification": True,
+        "demo_verification_code": verification_code  # Remove in production - send via email
+    }
+
+@api_router.post("/auth/send-verification")
+async def send_verification(request: SendVerificationRequest):
+    """Resend email verification code"""
+    user = await db.users.find_one({"email": request.email})
+    if not user:
+        raise HTTPException(status_code=400, detail="Email not found")
+    
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    # Generate new verification code
+    verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    # Store verification code
+    await db.email_verifications.delete_many({"email": request.email})
+    await db.email_verifications.insert_one({
+        "email": request.email,
+        "verification_code": verification_code,
+        "user_id": user.get("id") or user.get("user_id"),
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15)
+    })
+    
+    logger.info(f"Email verification code for {request.email}: {verification_code}")
+    
+    return {
+        "message": "Verification code sent to your email",
+        "demo_verification_code": verification_code  # Remove in production
+    }
+
+@api_router.post("/auth/verify-email")
+async def verify_email(request: VerifyEmailRequest):
+    """Verify email with code"""
+    # Find valid verification code
+    verification_doc = await db.email_verifications.find_one({
+        "email": request.email,
+        "verification_code": request.verification_code
+    })
+    
+    if not verification_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    
+    # Check expiry
+    expires_at = verification_doc["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
+        await db.email_verifications.delete_one({"_id": verification_doc["_id"]})
+        raise HTTPException(status_code=400, detail="Verification code has expired")
+    
+    # Mark email as verified
+    result = await db.users.update_one(
+        {"email": request.email},
+        {"$set": {"email_verified": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to verify email")
+    
+    # Delete used verification code
+    await db.email_verifications.delete_many({"email": request.email})
+    
+    # Get updated user
+    user = await db.users.find_one({"email": request.email}, {"_id": 0, "password": 0})
+    
+    return {
+        "message": "Email verified successfully!",
+        "user": user
     }
 
 @api_router.post("/auth/forgot-password")
@@ -366,6 +478,52 @@ async def login(request: LoginRequest):
 @api_router.post("/auth/logout")
 async def logout():
     return {"message": "Logged out successfully"}
+
+# ============ USER SETTINGS ============
+
+@api_router.get("/user/settings")
+async def get_user_settings(user_id: str = Depends(require_auth)):
+    """Get user settings including default currency"""
+    settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+    if not settings:
+        # Return default settings
+        settings = {"user_id": user_id, "default_currency": "PHP"}
+    return settings
+
+@api_router.put("/user/settings")
+async def update_user_settings(settings: Dict[str, Any], user_id: str = Depends(require_auth)):
+    """Update user settings"""
+    # Validate currency if provided
+    if "default_currency" in settings and settings["default_currency"] not in SUPPORTED_CURRENCIES:
+        raise HTTPException(status_code=400, detail=f"Invalid currency. Supported: {', '.join(SUPPORTED_CURRENCIES)}")
+    
+    settings["user_id"] = user_id
+    settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.user_settings.update_one(
+        {"user_id": user_id},
+        {"$set": settings},
+        upsert=True
+    )
+    
+    return settings
+
+@api_router.get("/currencies")
+async def get_supported_currencies():
+    """Get list of supported currencies"""
+    currency_info = {
+        "PHP": {"name": "Philippine Peso", "symbol": "₱"},
+        "USD": {"name": "US Dollar", "symbol": "$"},
+        "EUR": {"name": "Euro", "symbol": "€"},
+        "GBP": {"name": "British Pound", "symbol": "£"},
+        "JPY": {"name": "Japanese Yen", "symbol": "¥"},
+        "CNY": {"name": "Chinese Yuan", "symbol": "¥"},
+        "KRW": {"name": "Korean Won", "symbol": "₩"},
+        "SGD": {"name": "Singapore Dollar", "symbol": "S$"},
+        "AUD": {"name": "Australian Dollar", "symbol": "A$"},
+        "CAD": {"name": "Canadian Dollar", "symbol": "C$"}
+    }
+    return {"currencies": currency_info, "supported": SUPPORTED_CURRENCIES}
 
 # Google OAuth - Exchange session_id for user data
 # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH

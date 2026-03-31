@@ -1,127 +1,149 @@
 # KitaTracker - Product Requirements Document
 
 ## Original Problem Statement
-Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard (summary cards, charts), Income/Expense CRUD, Monthly Summaries, Reports, Settings, a "Smart paste-to-import" tool, Progressive Web App (PWA) offline support, and a Premium Authentication UI.
+Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard, Income/Expense CRUD, Monthly Summaries, Reports, Settings, Smart Import, PWA offline support, and Premium Authentication UI.
 
 ## Tech Stack
 - **Frontend**: React, Tailwind CSS, Shadcn UI, Recharts
 - **Backend**: FastAPI, Motor (Async MongoDB)
 - **Database**: MongoDB
-- **PWA**: Service Worker + Manifest for offline capability
+- **PWA**: Service Worker + Manifest
 - **Authentication**: JWT tokens, Google OAuth via Emergent Integrations
 
 ## Core Features Implemented
 
 ### Dashboard
-- Summary cards showing total income, expenses, and net balance
-- Interactive charts (pie charts, bar charts) using Recharts
-- Mobile-optimized layout with responsive chart legends
-- Auto-refresh when data changes via DataContext
-- **User Data Isolation**: Each user sees only their own data
+- Summary cards with totals
+- Interactive charts (Recharts)
+- User data isolation - each user sees only their data
 
-### Income Management
-- Full CRUD operations (Create, Read, Update, Delete)
-- Filter by month, search, product, person, payment status
-- Export to CSV functionality
-- Product dropdown with auto-populate text input
-
-### Expense Management
+### Income/Expense Management
 - Full CRUD operations
+- Multi-currency support (10 currencies)
 - Filter by month, search, category
-- Export to CSV functionality
-- Category dropdown with auto-populate text input
+- Export to CSV
+
+### Multi-Currency Support (NEW - March 31, 2026)
+Supported currencies:
+- **PHP** (₱) - Philippine Peso
+- **USD** ($) - US Dollar
+- **EUR** (€) - Euro
+- **GBP** (£) - British Pound
+- **JPY** (¥) - Japanese Yen
+- **CNY** (¥) - Chinese Yuan
+- **KRW** (₩) - Korean Won
+- **SGD** (S$) - Singapore Dollar
+- **AUD** (A$) - Australian Dollar
+- **CAD** (C$) - Canadian Dollar
+
+User can set default currency in Settings > Currency tab.
+
+### Email Verification (NEW - March 31, 2026)
+- 6-digit verification code sent during signup
+- User must verify email before accessing app
+- Demo mode: code displayed on screen
+- Resend code option
+- 15-minute code expiry
+
+### Backup & Restore (IMPROVED - March 31, 2026)
+- **Export**: Download all data as JSON
+- **Restore**: Confirmation dialog with backup details
+- **REPLACES existing data** (not additive)
+- Loading modal during restore with Cancel button
+- Progress indicator showing import status
+- Cannot dismiss modal by clicking outside
 
 ### Settings
-- Product management (Add/Edit/Delete)
-- Expense category management
-- Smart Import feature for bulk data entry
-- **Backup & Restore** - Export/Import data as JSON
-- **Sync & Refresh** - Clear browser cache and reload fresh data
+- Products management
+- Categories management
+- **Currency settings** (NEW)
+- Smart Import
+- Backup & Restore
 
-### PWA Features
-- Service worker for offline caching (static assets only)
-- **API calls always fetch from network** (never cached)
-- Installable as mobile app
+### Authentication
+- Premium glassmorphism UI
+- Email/Password login
+- **Email verification** (NEW)
+- Google OAuth via Emergent
+- Forgot password flow
+- JWT tokens
 
-## Authentication System (March 31, 2026)
+## API Endpoints
 
-### Premium Auth UI
-- Animated glassmorphism design with inline conditional rendering
-- Landing page with Google and Email login options
-- Sign in / Sign up / Forgot password flows
-- Google OAuth via Emergent Integrations
-- JWT token-based authentication
+### Auth
+- `POST /api/auth/register` - Register (returns verification code)
+- `POST /api/auth/send-verification` - Resend verification code
+- `POST /api/auth/verify-email` - Verify email with code
+- `POST /api/auth/login` - Login
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password
+- `POST /api/auth/google/callback` - Google OAuth callback
 
-### User Data Isolation (FIXED - March 31, 2026)
-- All CRUD endpoints require authentication
-- MongoDB queries filter by user_id
-- New users see empty dashboard (₱0.00)
-- Centralized API utility adds Authorization header automatically
+### User Settings
+- `GET /api/user/settings` - Get user settings (currency, etc.)
+- `PUT /api/user/settings` - Update user settings
+- `GET /api/currencies` - Get supported currencies list
 
-## Recent Updates (March 31, 2026)
+### Data (all require auth)
+- `GET/POST/PUT/DELETE /api/income` - Income CRUD
+- `GET/POST/PUT/DELETE /api/expenses` - Expenses CRUD
+- `GET /api/analytics/dashboard` - Dashboard data
+- `DELETE /api/data/clear-all` - Clear all user data
 
-### P0 Bug Fixes - COMPLETED ✅
+## Database Schema
 
-1. **Keyboard Bug on Auth Screens (FIXED)**
-   - **Root Cause**: Inner component functions (LandingView, SignInView, etc.) were recreated on every state change, causing React to unmount/remount inputs and lose focus
-   - **Solution**: Completely rewrote LoginPage.js to use inline conditional rendering with native HTML inputs and individual useState hooks
-   - Tested on mobile viewport (390x844) - can type full email/password without keyboard closing
-   - All 12 tests passed
+### users
+```json
+{
+  "id": "user_xxx",
+  "email": "user@example.com",
+  "password": "hashed",
+  "username": "username",
+  "email_verified": true/false,
+  "created_at": "ISO date"
+}
+```
 
-2. **User Data Isolation (FIXED)**
-   - Added `require_auth` dependency to all CRUD/analytics endpoints
-   - All MongoDB queries filter by authenticated user_id
-   - New users see empty dashboard
-   - 16/16 backend tests passed
+### user_settings
+```json
+{
+  "user_id": "user_xxx",
+  "default_currency": "PHP"
+}
+```
 
-3. **Backup/Restore (VERIFIED WORKING)**
-   - Export Backup downloads JSON file with user's data only
-   - Success toast shows entry count: "Backup created! X income + Y expense entries"
-   - Restore uploads and imports data correctly
+### income_entries / expense_entries
+```json
+{
+  "id": "uuid",
+  "user_id": "user_xxx",
+  "date": "2024-03-31",
+  "amount": 1000,
+  "currency": "PHP",
+  ...
+}
+```
+
+### email_verifications
+```json
+{
+  "email": "user@example.com",
+  "verification_code": "123456",
+  "user_id": "user_xxx",
+  "expires_at": "ISO date"
+}
+```
 
 ## Test Credentials
 - Main: joeljalapitjr@gmail.com / joelpogi
 - Demo: demo@finance.com / demo123
 
-## API Endpoints (All require auth except /auth/*)
-- `POST /api/auth/login` - Login
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/forgot-password` - Request password reset
-- `POST /api/auth/reset-password` - Reset password with code
-- `GET/POST/PUT/DELETE /api/income` - Income CRUD (requires auth)
-- `GET/POST/PUT/DELETE /api/expenses` - Expenses CRUD (requires auth)
-- `GET /api/analytics/dashboard` - Dashboard analytics (requires auth)
-- `GET /api/analytics/quick-summary` - Quick totals (requires auth)
-- `DELETE /api/data/clear-all` - Clear user's data (requires auth)
+## Recent Updates (March 31, 2026)
+1. ✅ Multi-currency support (10 currencies)
+2. ✅ Email verification during signup
+3. ✅ Backup restore improvements (replace not add, confirmation dialog, loading modal)
 
-## Future/Backlog Tasks (P2/P3)
-1. Recurring income/expense tracking (P2)
-2. Monthly budget limits with alerts (P2)
-3. Email verification (P2)
-4. Multi-currency support (P3)
-5. Refactor server.py (~1000 lines) into `/routes` directory (P3)
-
-## Code Architecture
-```
-/app/
-├── backend/
-│   ├── server.py              # FastAPI app, MongoDB, Auth & CRUD routes
-│   ├── requirements.txt
-│   └── .env                   # MONGO_URL, DB_NAME
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── LoginPage.js   # Inline conditional rendering (FIXED)
-│   │   │   ├── DashboardPage.js
-│   │   │   └── ...
-│   │   ├── components/
-│   │   │   └── BackupRestore.js
-│   │   ├── utils/
-│   │   │   └── api.js         # Axios with auth interceptor
-│   │   └── context/
-│   │       └── AuthContext.js
-│   └── package.json
-└── test_reports/
-    ├── iteration_3.json       # User data isolation tests
-    └── iteration_4.json       # Keyboard & backup tests
-```
+## Future/Backlog
+- Recurring income/expense tracking (P2)
+- Monthly budget limits with alerts (P2)
+- Refactor server.py into /routes directory (P3)

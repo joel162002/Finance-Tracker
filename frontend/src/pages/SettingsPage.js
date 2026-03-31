@@ -21,9 +21,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Settings, Check } from 'lucide-react';
 import { getDayName } from '../utils/date';
+import { CURRENCY_INFO, SUPPORTED_CURRENCIES } from '../utils/currency';
 
 import { BackupRestore } from '../components/BackupRestore';
 
@@ -51,9 +59,36 @@ export const SettingsPage = () => {
   const [parsedEntries, setParsedEntries] = useState([]);
   const [importing, setImporting] = useState(false);
 
+  // Currency settings
+  const [defaultCurrency, setDefaultCurrency] = useState('PHP');
+  const [savingCurrency, setSavingCurrency] = useState(false);
+
   useEffect(() => {
     fetchData();
+    fetchUserSettings();
   }, []);
+
+  const fetchUserSettings = async () => {
+    try {
+      const response = await api.get('/user/settings');
+      setDefaultCurrency(response.data.default_currency || 'PHP');
+    } catch (error) {
+      console.error('Failed to fetch user settings');
+    }
+  };
+
+  const handleCurrencyChange = async (currency) => {
+    setSavingCurrency(true);
+    try {
+      await api.put('/user/settings', { default_currency: currency });
+      setDefaultCurrency(currency);
+      toast.success(`Default currency changed to ${CURRENCY_INFO[currency]?.name || currency}`);
+    } catch (error) {
+      toast.error('Failed to update currency');
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -236,6 +271,7 @@ export const SettingsPage = () => {
           <TabsList className="bg-white border border-slate-200 inline-flex min-w-full sm:min-w-0">
             <TabsTrigger value="products" data-testid="products-tab" className="text-xs sm:text-sm whitespace-nowrap">Products</TabsTrigger>
             <TabsTrigger value="categories" data-testid="categories-tab" className="text-xs sm:text-sm whitespace-nowrap">Categories</TabsTrigger>
+            <TabsTrigger value="currency" data-testid="currency-tab" className="text-xs sm:text-sm whitespace-nowrap">Currency</TabsTrigger>
             <TabsTrigger value="import" data-testid="import-tab" className="text-xs sm:text-sm whitespace-nowrap">Import</TabsTrigger>
             <TabsTrigger value="backup" data-testid="backup-tab" className="text-xs sm:text-sm whitespace-nowrap">Backup</TabsTrigger>
           </TabsList>
@@ -363,6 +399,63 @@ export const SettingsPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="currency">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200">
+            <div className="mb-6">
+              <h3 className="text-xl font-medium text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Currency Settings
+              </h3>
+              <p className="text-sm text-slate-600">
+                Set your default currency for income and expense tracking.
+              </p>
+            </div>
+
+            <div className="max-w-md">
+              <Label className="text-slate-700 font-medium mb-2 block">Default Currency</Label>
+              <Select value={defaultCurrency} onValueChange={handleCurrencyChange} disabled={savingCurrency}>
+                <SelectTrigger className="w-full rounded-xl" data-testid="currency-select">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <SelectItem key={currency} value={currency}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-lg">{CURRENCY_INFO[currency]?.symbol}</span>
+                        <span>{currency}</span>
+                        <span className="text-slate-500 text-sm">- {CURRENCY_INFO[currency]?.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {savingCurrency && <p className="text-xs text-slate-500 mt-2">Saving...</p>}
+            </div>
+
+            <div className="mt-8 p-4 bg-slate-50 rounded-xl">
+              <h4 className="font-medium text-slate-800 mb-3">Supported Currencies</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <div 
+                    key={currency} 
+                    className={`p-3 rounded-lg border text-center cursor-pointer transition-all ${
+                      currency === defaultCurrency 
+                        ? 'border-emerald-500 bg-emerald-50' 
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    onClick={() => handleCurrencyChange(currency)}
+                  >
+                    <div className="text-2xl font-mono">{CURRENCY_INFO[currency]?.symbol}</div>
+                    <div className="text-sm font-medium text-slate-700">{currency}</div>
+                    {currency === defaultCurrency && (
+                      <Check className="w-4 h-4 text-emerald-600 mx-auto mt-1" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </TabsContent>
