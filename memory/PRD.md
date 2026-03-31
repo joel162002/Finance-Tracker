@@ -147,8 +147,13 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 9. ✅ **User Profile Management** - Clickable profile in header with options to edit name, change password, and delete account
 10. ✅ **Fixed input focus loss bug** - Users can now type smoothly in Product/Customer/Category inputs without text resetting (root cause: Radix Select controlled/uncontrolled state switching)
 11. ✅ **Fixed date handling** - Date fields now properly default to today's local date, entries save to correct month based on selected date
+12. ✅ **Auto-generate recurring entries** - Manual "Generate Entries" button + auto-generate on dashboard login (once per session)
+13. ✅ **Import with custom month** - Target Month picker in import dialog lets users import data to any month
+14. ✅ **UI/Chart improvements** - Donut-style pie charts, responsive bar/line charts, angled labels on Reports page
+15. ✅ **Partial refactoring** - Created /app/backend/models.py with centralized data models
 
 ## Future/Backlog
-- Auto-generate entries from recurring (cron job)
+- Currency conversion with live exchange rates
 - Email notifications for budget alerts
-- Refactor server.py into /routes directory
+- Complete server.py refactoring into /routes directory (partial done - models.py created)
+- Real email verification via SendGrid (currently demo mode)
