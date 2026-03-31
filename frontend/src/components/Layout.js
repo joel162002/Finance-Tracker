@@ -41,9 +41,9 @@ export const Layout = ({ children }) => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <img 
-                src="/logo-48x48.png" 
+                src="/logo-64x64.png" 
                 alt="KitaTracker" 
-                className="w-10 h-10 rounded-lg flex-shrink-0"
+                className="h-10 w-auto flex-shrink-0"
               />
               <h1 className="text-base sm:text-lg md:text-xl font-medium text-slate-900 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 <span className="hidden sm:inline">KitaTracker</span>
