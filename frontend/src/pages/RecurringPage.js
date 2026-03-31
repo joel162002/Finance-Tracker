@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { CURRENCY_INFO } from '../utils/currency';
+import { getTodayDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +31,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Repeat, TrendingUp, TrendingDown, Pause, Play } from 'lucide-react';
+import { Plus, Edit, Trash2, Repeat, TrendingUp, TrendingDown, Pause, Play, Zap, RefreshCw } from 'lucide-react';
+import { useDataRefresh } from '../context/DataContext';
 
 const FREQUENCIES = [
   { value: 'daily', label: 'Daily' },
@@ -41,6 +43,7 @@ const FREQUENCIES = [
 
 export const RecurringPage = () => {
   const { currency, formatCurrency } = useCurrency();
+  const { triggerRefresh } = useDataRefresh();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -48,6 +51,7 @@ export const RecurringPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const [formData, setFormData] = useState({
     type: 'expense',
@@ -56,7 +60,7 @@ export const RecurringPage = () => {
     description: '',
     category_or_product: '',
     frequency: 'monthly',
-    start_date: new Date().toISOString().split('T')[0],
+    start_date: getTodayDate(),
     end_date: ''
   });
 
@@ -88,10 +92,32 @@ export const RecurringPage = () => {
       description: '',
       category_or_product: '',
       frequency: 'monthly',
-      start_date: new Date().toISOString().split('T')[0],
+      start_date: getTodayDate(),
       end_date: ''
     });
     setEditingItem(null);
+  };
+
+  // Generate entries from due recurring transactions
+  const handleGenerateEntries = async () => {
+    try {
+      setGenerating(true);
+      const response = await api.post('/recurring/generate');
+      const { income_count, expense_count, entries } = response.data;
+      
+      if (income_count === 0 && expense_count === 0) {
+        toast.info('No entries to generate - all recurring transactions are up to date!');
+      } else {
+        toast.success(`Generated ${income_count} income and ${expense_count} expense entries`);
+        triggerRefresh(); // Refresh dashboard
+      }
+      
+      fetchTransactions(); // Refresh to show updated last_generated dates
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to generate entries');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -182,14 +208,30 @@ export const RecurringPage = () => {
           </h1>
           <p className="text-slate-600 mt-1">Manage your recurring income and expenses</p>
         </div>
-        <Button 
-          onClick={() => { resetForm(); setDialogOpen(true); }}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
-          data-testid="add-recurring-btn"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Recurring
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            onClick={handleGenerateEntries}
+            disabled={generating || transactions.filter(t => t.is_active).length === 0}
+            variant="outline"
+            className="rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            data-testid="generate-entries-btn"
+          >
+            {generating ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4 mr-2" />
+            )}
+            {generating ? 'Generating...' : 'Generate Entries'}
+          </Button>
+          <Button 
+            onClick={() => { resetForm(); setDialogOpen(true); }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
+            data-testid="add-recurring-btn"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Recurring
+          </Button>
+        </div>
       </div>
 
       {loading ? (

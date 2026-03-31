@@ -86,42 +86,55 @@ export const ReportsPage = () => {
         </div>
       </div>
 
-      <div className="space-y-8">
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-by-product-section">
-          <h3 className="text-xl sm:text-2xl font-medium text-slate-800 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <div className="space-y-6 sm:space-y-8">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-by-product-section">
+          <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4 sm:mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Income by Product
           </h3>
           {reports?.income_by_product && reports.income_by_product.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reports.income_by_product}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'white',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '8px 12px'
-                    }}
-                    formatter={(value) => formatCurrency(value)}
-                  />
-                  <Bar dataKey="amount" fill="#059669" name="Amount" />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full">
+              <div className="w-full h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reports.income_by_product} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#64748b', fontSize: 10 }} 
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#64748b', fontSize: 10 }} 
+                      tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'white',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value) => formatCurrency(value)}
+                    />
+                    <Bar dataKey="amount" fill="#059669" name="Amount" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 sm:mt-6 overflow-x-auto -mx-4 sm:mx-0">
+                <table className="w-full min-w-[400px]">
                   <thead>
                     <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Product</th>
-                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Sales Count</th>
-                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Total Amount</th>
+                      <th className="text-left py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Product</th>
+                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Sales</th>
+                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reports.income_by_product.map((item, index) => (
-                      <tr key={index} className="border-b border-slate-100">
+                      <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-2 text-sm text-slate-900">{item.name}</td>
                         <td className="py-3 px-2 text-right text-sm text-slate-700">{item.count}</td>
                         <td className="py-3 px-2 text-right text-sm font-medium text-emerald-600">{formatCurrency(item.amount)}</td>
@@ -136,41 +149,54 @@ export const ReportsPage = () => {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-by-person-section">
-          <h3 className="text-xl sm:text-2xl font-medium text-slate-800 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-by-person-section">
+          <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4 sm:mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Income by Customer
           </h3>
           {reports?.income_by_person && reports.income_by_person.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reports.income_by_person}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'white',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '8px 12px'
-                    }}
-                    formatter={(value) => formatCurrency(value)}
-                  />
-                  <Bar dataKey="amount" fill="#1E3A8A" name="Amount" />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full">
+              <div className="w-full h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reports.income_by_person} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#64748b', fontSize: 10 }}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#64748b', fontSize: 10 }}
+                      tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'white',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value) => formatCurrency(value)}
+                    />
+                    <Bar dataKey="amount" fill="#1E3A8A" name="Amount" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 sm:mt-6 overflow-x-auto -mx-4 sm:mx-0">
+                <table className="w-full min-w-[400px]">
                   <thead>
                     <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Customer</th>
-                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Transactions</th>
-                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">Total Amount</th>
+                      <th className="text-left py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Customer</th>
+                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Transactions</th>
+                      <th className="text-right py-3 px-2 text-xs uppercase tracking-[0.15em] font-semibold text-slate-400">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reports.income_by_person.map((item, index) => (
-                      <tr key={index} className="border-b border-slate-100">
+                      <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-2 text-sm text-slate-900">{item.name}</td>
                         <td className="py-3 px-2 text-right text-sm text-slate-700">{item.count}</td>
                         <td className="py-3 px-2 text-right text-sm font-medium text-blue-600">{formatCurrency(item.amount)}</td>

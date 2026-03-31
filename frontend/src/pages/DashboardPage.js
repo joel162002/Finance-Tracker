@@ -83,6 +83,25 @@ export const DashboardPage = () => {
     setLoading(true);
     fetchQuickSummary();
     fetchAnalytics();
+    
+    // Auto-generate recurring entries on dashboard load (once per session)
+    const hasGeneratedThisSession = sessionStorage.getItem('recurring_generated');
+    if (!hasGeneratedThisSession) {
+      api.post('/recurring/generate')
+        .then(response => {
+          const { income_count, expense_count } = response.data;
+          if (income_count > 0 || expense_count > 0) {
+            // If entries were generated, refresh the data
+            fetchQuickSummary();
+            fetchAnalytics();
+          }
+          sessionStorage.setItem('recurring_generated', 'true');
+        })
+        .catch(err => {
+          // Silently handle error - don't disrupt user experience
+          console.log('Auto-generate recurring skipped:', err.message);
+        });
+    }
   }, [selectedMonth, fetchQuickSummary, fetchAnalytics]);
 
   // Auto-refresh when data changes (from other pages)
@@ -230,49 +249,63 @@ export const DashboardPage = () => {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-expense-chart">
-          <h3 className="text-xl sm:text-2xl font-medium text-slate-800 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="income-expense-chart">
+          <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4 sm:mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Income vs Expenses
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={analytics?.daily_data || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  background: 'white',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  padding: '8px 12px'
-                }}
-                formatter={(value) => formatCurrency(value)}
-              />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="income" 
-                stroke={INCOME_COLOR} 
-                strokeWidth={2}
-                name="Income"
-              />
-              <Line 
-                type="monotone" 
-                dataKey="expenses" 
-                stroke={EXPENSE_COLOR} 
-                strokeWidth={2}
-                name="Expenses"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[250px] sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics?.daily_data || []} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: '#64748b', fontSize: 10 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis 
+                  tick={{ fill: '#64748b', fontSize: 10 }} 
+                  width={50}
+                  tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'white',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value) => formatCurrency(value)}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="income" 
+                  stroke={INCOME_COLOR} 
+                  strokeWidth={2}
+                  name="Income"
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="expenses" 
+                  stroke={EXPENSE_COLOR} 
+                  strokeWidth={2}
+                  name="Expenses"
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="top-customers-list">
@@ -300,52 +333,60 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
         <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05)]" data-testid="product-chart">
           <h3 className="text-lg sm:text-xl md:text-2xl font-medium text-slate-800 mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Income by Product
           </h3>
           {analytics?.product_data && analytics.product_data.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={analytics.product_data.slice(0, 6)}
-                    cx="50%"
-                    cy="45%"
-                    labelLine={false}
-                    label={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {analytics.product_data.slice(0, 6).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{
-                      background: 'white',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '8px 12px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+              <div className="w-full aspect-square max-h-[280px] sm:max-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analytics.product_data.slice(0, 6)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      innerRadius="35%"
+                      outerRadius="70%"
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {analytics.product_data.slice(0, 6).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value)}
+                      contentStyle={{
+                        background: 'white',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
                 {analytics.product_data.slice(0, 6).map((item, index) => {
                   const total = analytics.product_data.reduce((sum, i) => sum + i.value, 0);
                   const percent = ((item.value / total) * 100).toFixed(0);
                   return (
-                    <div key={index} className="flex items-center gap-2">
+                    <div key={index} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
                       <div 
                         className="w-3 h-3 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-slate-700 truncate">
-                        {item.name} ({percent}%)
+                      <span className="text-slate-700 truncate flex-1">
+                        {item.name}
+                      </span>
+                      <span className="text-slate-500 text-xs">
+                        {percent}%
                       </span>
                     </div>
                   );
@@ -356,7 +397,10 @@ export const DashboardPage = () => {
               )}
             </>
           ) : (
-            <p className="text-sm text-slate-500 text-center py-12">No product data yet</p>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <TrendingUp className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-sm">No product data yet</p>
+            </div>
           )}
         </div>
 
@@ -366,19 +410,22 @@ export const DashboardPage = () => {
           </h3>
           {analytics?.category_data && analytics.category_data.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={analytics.category_data.slice(0, 6)}
-                    cx="50%"
-                    cy="45%"
-                    labelLine={false}
-                    label={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {analytics.category_data.slice(0, 6).map((entry, index) => (
+              <div className="w-full aspect-square max-h-[280px] sm:max-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analytics.category_data.slice(0, 6)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      innerRadius="35%"
+                      outerRadius="70%"
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {analytics.category_data.slice(0, 6).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -388,23 +435,28 @@ export const DashboardPage = () => {
                       background: 'white',
                       border: '1px solid #E2E8F0',
                       borderRadius: '8px',
-                      padding: '8px 12px'
+                      padding: '8px 12px',
+                      fontSize: '12px'
                     }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+              </div>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
                 {analytics.category_data.slice(0, 6).map((item, index) => {
                   const total = analytics.category_data.reduce((sum, i) => sum + i.value, 0);
                   const percent = ((item.value / total) * 100).toFixed(0);
                   return (
-                    <div key={index} className="flex items-center gap-2">
+                    <div key={index} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
                       <div 
                         className="w-3 h-3 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-slate-700 truncate">
-                        {item.name} ({percent}%)
+                      <span className="text-slate-700 truncate flex-1">
+                        {item.name}
+                      </span>
+                      <span className="text-slate-500 text-xs">
+                        {percent}%
                       </span>
                     </div>
                   );
@@ -415,7 +467,10 @@ export const DashboardPage = () => {
               )}
             </>
           ) : (
-            <p className="text-sm text-slate-500 text-center py-12">No expense data yet</p>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <TrendingDown className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-sm">No expense data yet</p>
+            </div>
           )}
         </div>
       </div>

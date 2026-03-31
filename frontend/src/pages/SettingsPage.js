@@ -30,8 +30,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload } from 'lucide-react';
-import { getDayName } from '../utils/date';
+import { Plus, Edit, Trash2, Upload, Calendar } from 'lucide-react';
+import { getDayName, getCurrentMonth } from '../utils/date';
 
 import { BackupRestore } from '../components/BackupRestore';
 
@@ -57,6 +57,7 @@ export const SettingsPage = () => {
   
   const [importText, setImportText] = useState('');
   const [importType, setImportType] = useState('income');
+  const [importMonth, setImportMonth] = useState(getCurrentMonth()); // New: Month selector
   const [parsedEntries, setParsedEntries] = useState([]);
   const [importing, setImporting] = useState(false);
 
@@ -155,14 +156,18 @@ export const SettingsPage = () => {
   const handleConfirmImport = async () => {
     try {
       setImporting(true);
+      
+      // Parse selected month (YYYY-MM format)
+      const [selectedYear, selectedMonth] = importMonth.split('-').map(Number);
       const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
       
       const promises = parsedEntries.map(entry => {
-        // Use the day from parsed entry, or current day if not available
-        const day = entry.day ? parseInt(entry.day) : currentDate.getDate();
-        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        // Use the day from parsed entry, or day 1 if not available
+        const day = entry.day ? parseInt(entry.day) : 1;
+        // Ensure day is valid for the selected month
+        const maxDay = new Date(selectedYear, selectedMonth, 0).getDate();
+        const validDay = Math.min(day, maxDay);
+        const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(validDay).padStart(2, '0')}`;
         
         if (importType === 'income') {
           return api.post('/income', {
@@ -214,7 +219,7 @@ export const SettingsPage = () => {
       });
 
       await Promise.all(promises);
-      toast.success(`Successfully imported ${parsedEntries.length} ${importType} entries`);
+      toast.success(`Successfully imported ${parsedEntries.length} ${importType} entries to ${importMonth}`);
       setImportDialogOpen(false);
       setImportText('');
       setParsedEntries([]);
@@ -403,27 +408,45 @@ export const SettingsPage = () => {
                 </DialogHeader>
 
                 <div className="space-y-4">
-                  <div>
-                    <Label>Import Type</Label>
-                    <div className="flex gap-4 mt-2">
-                      <Button
-                        type="button"
-                        onClick={() => setImportType('income')}
-                        variant={importType === 'income' ? 'default' : 'outline'}
-                        className="rounded-xl"
-                        data-testid="import-type-income"
-                      >
-                        Income
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setImportType('expense')}
-                        variant={importType === 'expense' ? 'default' : 'outline'}
-                        className="rounded-xl"
-                        data-testid="import-type-expense"
-                      >
-                        Expense
-                      </Button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Import Type</Label>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          type="button"
+                          onClick={() => setImportType('income')}
+                          variant={importType === 'income' ? 'default' : 'outline'}
+                          className="rounded-xl flex-1"
+                          data-testid="import-type-income"
+                        >
+                          Income
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => setImportType('expense')}
+                          variant={importType === 'expense' ? 'default' : 'outline'}
+                          className="rounded-xl flex-1"
+                          data-testid="import-type-expense"
+                        >
+                          Expense
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="import-month">Target Month</Label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Calendar className="w-4 h-4 text-slate-500" />
+                        <input
+                          id="import-month"
+                          type="month"
+                          value={importMonth}
+                          onChange={(e) => setImportMonth(e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm"
+                          data-testid="import-month-input"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Entries will be imported to this month</p>
                     </div>
                   </div>
 
@@ -434,7 +457,7 @@ export const SettingsPage = () => {
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
                       placeholder="Example:\n2- 489 Motionarray (Gian Mendoza)\n849 Adobe All Apps (Rosalyn Caldito)"
-                      className="w-full h-32 mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm"
+                      className="w-full h-32 mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                       data-testid="import-text-input"
                     />
                   </div>
