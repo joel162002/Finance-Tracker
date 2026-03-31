@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { formatCurrency } from '../utils/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { formatDate, getDayName, getCurrentMonth, formatDateForInput } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,7 @@ export const IncomePage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const { triggerRefresh } = useDataRefresh();
+  const { formatCurrency } = useCurrency();
   
   const [filters, setFilters] = useState({
     month: getCurrentMonth(),

@@ -142,6 +142,8 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 4. ✅ Multi-currency support (10 currencies)
 5. ✅ Email verification during signup
 6. ✅ Backup restore improvements (replace mode)
+7. ✅ **Fixed global currency formatting** - Currency symbol now updates across all pages (Dashboard, Income, Expenses, Reports, Budgets, Recurring) when changed from header
+8. ✅ **Removed redundant Currency tab from Settings** - Currency selection is now only in the header
 
 ## Future/Backlog
 - Auto-generate entries from recurring (cron job)

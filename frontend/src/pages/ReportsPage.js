@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { formatCurrency } from '../utils/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
@@ -19,6 +19,7 @@ export const ReportsPage = () => {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const { formatCurrency } = useCurrency();
 
   useEffect(() => {
     fetchReports();

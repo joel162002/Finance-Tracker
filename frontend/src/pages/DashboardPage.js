@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
-import { formatCurrency } from '../utils/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { formatDate, getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { 
@@ -42,6 +42,7 @@ export const DashboardPage = () => {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const navigate = useNavigate();
   const { refreshTrigger } = useDataRefresh();
+  const { formatCurrency } = useCurrency();
 
   // Fast initial load with quick summary
   const fetchQuickSummary = useCallback(async () => {

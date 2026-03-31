@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatCurrency, CURRENCY_INFO } from '../utils/currency';
+import { CURRENCY_INFO } from '../utils/currency';
 import { getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +47,7 @@ const COMMON_CATEGORIES = [
 ];
 
 export const BudgetsPage = () => {
-  const { currency } = useCurrency();
+  const { currency, formatCurrency } = useCurrency();
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [budgetStatus, setBudgetStatus] = useState(null);
   const [loading, setLoading] = useState(true);

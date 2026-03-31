@@ -1,0 +1,133 @@
+<analysis>**original_problem_statement**: Build a clean, modern, mobile-friendly web application for personal business finance tracking (KitaTracker). Core features include Dashboard (summary cards, charts), Income/Expense CRUD, Monthly Summaries, Reports, Settings, a Smart paste-to-import tool, Progressive Web App (PWA) offline support, Premium Authentication UI, Multi-currency support, Budget Limits, Recurring Transactions, and Email Verification.
+
+**User's preferred language**: English (INSTRUCT next agent to respond in English only)
+
+**what currently exists?** 
+KitaTracker is a fully functional Progressive Web App (PWA) built with React (Frontend) and FastAPI + MongoDB (Backend). It includes secure JWT-based auth with User Data Isolation, Google OAuth, email verification on signup, Dashboard analytics, full CRUD for Income/Expenses, Recurring Transactions, Monthly Budgets, and data backup/restore capabilities. A multi-currency selector has been added to the header.
+
+**Last working item**:
+- **Last item agent was working**: Fixing the global currency symbol formatting. The user reported that changing the currency in the header dropdown successfully updates the user setting, but the entire app UI still hardcodes and displays the Peso sign (₱). The agent also needed to remove the redundant Currency tab from the Settings page.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?** Frontend testing agent / Screenshot tool
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+Issue 1: Global Currency Symbol Not Updating (P0)
+Issue 2: Remove Currency Tab from Settings (P1)
+
+Issues Detail:
+- Issue 1: Global Currency Symbol Not Updating
+   - Attempted fixes: Agent added  and a header dropdown. Agent started viewing  to inspect how  is being used but hasn't updated the formatting logic yet.
+   - Next debug checklist: Check . The  function is likely hardcoding  or the  symbol. Update it to accept a currency code/symbol from the , or create a  hook to expose a dynamic formatting function across all pages (, , , , etc.).
+   - Why fix this issue and what will be achieved with the fix? Completes the multi-currency feature. The user expects all financial values to reflect their selected currency.
+   - Status: IN PROGRESS
+   - Is recurring issue? N
+   - Should Test frontend/backend/both after fix? Frontend
+   - Blocked on other issue: None
+- Issue 2: Remove Currency Tab from Settings
+   - Attempted fixes: None yet.
+   - Next debug checklist: Check  and remove the  and  for the currency value since it was moved to the header component ().
+   - Why fix this issue and what will be achieved with the fix? Removes redundant UI elements as requested by the user.
+   - Status: NOT STARTED
+   - Is recurring issue? N
+   - Should Test frontend/backend/both after fix? Frontend
+   - Blocked on other issue: None
+
+**In progress Task List**:
+*No active tasks aside from the issues listed above.*
+
+**Upcoming and Future Tasks**:
+- Auto-generate actual entries from recurring transactions via a cron job/background task (P2)
+- Email notifications for budget alerts (P2)
+- Refactor  (~1500 lines) into  directory (P3)
+- Send verification emails via a real email service (currently running in demo/mock mode displaying the code on screen) (P3)
+
+**Completed work in this session**:
+- Fixed User Data Isolation (Added  filtering on all backend endpoints and  Axios interceptor for frontend auth headers) (DONE)
+- Fixed Auth screen keyboard bug (Unmounted inline functions causing focus loss) (DONE)
+- Updated Logo and Favicon images (DONE)
+- Fixed Google OAuth callback redirect & token generation issues (DONE)
+- Implemented robust Backup/Restore with a non-cancellable loading modal and data wiping (DONE)
+- Built Email Verification flow on Signup (DONE)
+- Implemented Multi-currency support infrastructure (API + Context + Header UI) (DONE)
+- Built Recurring Transactions (Models, Endpoints, UI page) (DONE)
+- Built Budget Limits (Models, Endpoints, UI page) (DONE)
+
+**Earlier issues found/mentioned but not fixed**:
+*None.*
+
+**Known issue recurrence from previous fork**:
+- Issue recurrence in previous fork: None. 
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- Frontend: React, Tailwind CSS, Shadcn UI, Recharts, Context API (Auth, Data, Currency).
+- Backend: FastAPI, Motor (Async MongoDB), JWT Authentication.
+- API Communications: Uses centralized  interceptor to automatically attach JWT tokens (DO NOT use raw  imports).
+- Google OAuth: Handled via Emergent Integrations standard playbook.
+
+**key DB schema**
+- : 
+- : 
+- : 
+
+**changes in tech stack**
+- Centralized API utility () acts as an interceptor for all HTTP requests to ensure  is present.
+
+**All files of reference**
+- : Currently hardcodes formatting. Needs to consume the selected currency symbol.
+- : Contains the redundant Currency tab that needs removing.
+- : Manages the state of the user's selected currency.
+
+**Areas that need refactoring**:
+-  is now over 1500 lines long. It should be refactored into a modular  directory structure for easier maintainability (P3).
+
+**key api endpoints**
+- 
+- 
+- 
+- 
+
+**Critical Info for New Agent**
+- **Axios vs API wrapper**: All frontend components must use  instead of  to ensure the authentication token is automatically passed.
+- **Currency formatting issue**:  does not have access to React Context hooks directly outside of a component. You may need to either refactor  into a custom hook  that wraps , or update  to explicitly require the currency string as a second argument, passing it down from components.
+- **Data Isolation**: Always ensure  is included in any new backend endpoint you create.
+
+**documents and test reports created in this job**
+- 
+- 
+- 
+- 
+
+**Last 10 User Messages and any pending HUMAN messages** 
+1. User: Reported backup/restore fail and auth screen keyboard glitch. (Fixed)
+2. User: Asked to update Logo/Favicon, fix Google Login, and fix Backup file upload. (Fixed)
+3. User: Reported being stuck on Completing sign in... after Google OAuth. (Fixed)
+4. User: Requested prioritization of Multi-currency, Email Verification, and making Backup/Restore utilize an un-cancellable loading state that replaces existing data. (Fixed)
+5. User: Approved plan via .
+6. User: Requested next phase: Recurring tracking and Budgets. Reported Currency selector doesn't work, asked to move it to the Header UI. (Added new features, moved selector to Header)
+7. **User (Pending)**: It says Currency changed to US Dollar but the currency sign from all in the system still peso sign, please fix it and remove the currency tab from the settings because it already have in above
+
+**Project Health Check:**
+Broken: Currency formatting UI utility (Hardcoded to peso/PHP).
+
+**3rd Party Integrations**
+- Emergent-managed Google Auth — uses Emergent LLM Key
+- SendGrid (Playbook fetched, but currently implemented as a console/demo mocked flow)
+
+**Testing status**
+- Testing agent used after significant changes: YES (Iterations 3 & 4)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: , 
+- Known regressions: None, aside from the requested UI currency bug.
+
+**Credentials to test flow:**
+(Check  for latest):
+- Main:  / 
+- Demo:  / 
+
+**What agent forgot to execute**
+- The agent successfully added the Currency dropdown to the Layout Header and confirmed the backend updates the default currency. However, the agent forgot to wire up the actual  to the generic  function in  and exhaustively update all page components to use it. The agent also forgot to remove the redundant Currency Tab in the Settings page before finishing.</analysis>

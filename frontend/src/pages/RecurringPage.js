@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatCurrency, CURRENCY_INFO } from '../utils/currency';
+import { CURRENCY_INFO } from '../utils/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +40,7 @@ const FREQUENCIES = [
 ];
 
 export const RecurringPage = () => {
-  const { currency } = useCurrency();
+  const { currency, formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);

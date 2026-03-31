@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
-import { CURRENCY_INFO, SUPPORTED_CURRENCIES } from '../utils/currency';
+import { CURRENCY_INFO, SUPPORTED_CURRENCIES, formatCurrency as formatCurrencyUtil } from '../utils/currency';
 
 const CurrencyContext = createContext();
 
@@ -64,11 +64,17 @@ export const CurrencyProvider = ({ children }) => {
     return CURRENCY_INFO[currency] || CURRENCY_INFO.PHP;
   }, [currency]);
 
+  // Context-aware formatCurrency function that uses the current currency
+  const formatCurrency = useCallback((amount, overrideCurrency = null) => {
+    return formatCurrencyUtil(amount, overrideCurrency || currency);
+  }, [currency]);
+
   const value = {
     currency,
     setCurrency: changeCurrency,
     getCurrencySymbol,
     getCurrencyInfo,
+    formatCurrency,
     loading,
     supportedCurrencies: SUPPORTED_CURRENCIES,
     currencyInfo: CURRENCY_INFO
