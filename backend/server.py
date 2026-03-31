@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 import io
 import csv
@@ -163,6 +163,49 @@ class ImportRequest(BaseModel):
 
 # ============ AUTH ENDPOINTS ============
 
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+@api_router.post("/auth/register")
+async def register(request: RegisterRequest):
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": request.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Check if username already exists
+    existing_username = await db.users.find_one({"username": request.username})
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    
+    # Validate password length
+    if len(request.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Create new user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    new_user = {
+        "id": user_id,
+        "user_id": user_id,
+        "username": request.username,
+        "email": request.email,
+        "password": request.password,
+        "name": request.username,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(new_user)
+    
+    # Remove password from response
+    user_response = {k: v for k, v in new_user.items() if k not in ["password", "_id"]}
+    
+    return {
+        "token": f"token-{user_id}",
+        "user": user_response
+    }
+
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     user_doc = await db.users.find_one({"email": request.email}, {"_id": 0})
@@ -178,13 +221,81 @@ async def login(request: LoginRequest):
     user_response = {k: v for k, v in user_doc.items() if k != "password"}
     
     return LoginResponse(
-        token="token-" + user_doc["id"],
+        token="token-" + user_doc.get("id", user_doc.get("user_id", "")),
         user=user_response
     )
 
 @api_router.post("/auth/logout")
 async def logout():
     return {"message": "Logged out successfully"}
+
+# Google OAuth - Exchange session_id for user data
+# REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+@api_router.post("/auth/google/callback")
+async def google_auth_callback(session_id: str = Query(...)):
+    import httpx
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": session_id}
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid session")
+            
+            google_data = response.json()
+            
+            # Check if user exists
+            existing_user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
+            
+            if existing_user:
+                # Update existing user
+                await db.users.update_one(
+                    {"email": google_data["email"]},
+                    {"$set": {
+                        "name": google_data.get("name", existing_user.get("name")),
+                        "picture": google_data.get("picture"),
+                        "last_login": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                user_doc = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
+            else:
+                # Create new user from Google data
+                user_id = f"user_{uuid.uuid4().hex[:12]}"
+                new_user = {
+                    "id": user_id,
+                    "user_id": user_id,
+                    "email": google_data["email"],
+                    "name": google_data.get("name", google_data["email"].split("@")[0]),
+                    "username": google_data["email"].split("@")[0],
+                    "picture": google_data.get("picture"),
+                    "auth_provider": "google",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(new_user)
+                user_doc = {k: v for k, v in new_user.items() if k != "_id"}
+            
+            # Store session
+            session_token = google_data.get("session_token", f"session_{uuid.uuid4().hex}")
+            await db.user_sessions.insert_one({
+                "user_id": user_doc.get("id", user_doc.get("user_id")),
+                "session_token": session_token,
+                "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
+                "created_at": datetime.now(timezone.utc)
+            })
+            
+            # Remove sensitive data from response
+            user_response = {k: v for k, v in user_doc.items() if k not in ["password", "_id"]}
+            
+            return {
+                "token": session_token,
+                "user": user_response
+            }
+            
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Authentication service error: {str(e)}")
 
 # ============ PRODUCT ENDPOINTS ============
 

@@ -1,8 +1,9 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { LoginPage } from './pages/LoginPage';
+import { AuthCallback } from './pages/AuthCallback';
 import { DashboardPage } from './pages/DashboardPage';
 import { IncomePage } from './pages/IncomePage';
 import { ExpensesPage } from './pages/ExpensesPage';
@@ -15,6 +16,11 @@ import { Toaster } from '@/components/ui/sonner';
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+
+  // CRITICAL: If returning from OAuth callback, skip the auth check
+  if (window.location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
 
   if (loading) {
     return (
@@ -33,6 +39,11 @@ const PrivateRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
+  // CRITICAL: If returning from OAuth callback, don't redirect
+  if (window.location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -46,6 +57,18 @@ const PublicRoute = ({ children }) => {
 
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 };
+
+// Router wrapper to detect OAuth callback
+function AppRouter() {
+  const location = useLocation();
+  
+  // Check URL fragment for session_id (OAuth callback)
+  if (location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
+  
+  return <AppRoutes />;
+}
 
 function AppRoutes() {
   return (
@@ -135,7 +158,7 @@ function App() {
     <AuthProvider>
       <DataProvider>
         <BrowserRouter>
-          <AppRoutes />
+          <AppRouter />
           <InstallPrompt />
           <Toaster position="top-right" />
         </BrowserRouter>
