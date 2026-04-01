@@ -302,16 +302,14 @@ export const LoginPage = () => {
                 />
               </div>
               
-              <h1 className="text-xl font-bold mb-8 leading-relaxed">
-                <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold mb-8 leading-loose">
+                <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent block mb-2">
                   See your real income.
                 </span>
-                <br />
-                <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-300 bg-clip-text text-transparent block mb-2">
                   Control your expenses.
                 </span>
-                <br />
-                <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent block">
                   Grow your business with clarity.
                 </span>
               </h1>
