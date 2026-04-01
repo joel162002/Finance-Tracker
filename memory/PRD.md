@@ -162,12 +162,28 @@ Build a clean, modern, mobile-friendly web application for personal business fin
     - 15-day auto-cleanup
 17. ✅ **Updated App Logo & Favicon** (April 1, 2026) - New KitaTracker eye logo with green/blue gradient
     - Updated all PWA icons (16x16 to 512x512)
-    - Bigger logo on login page (h-28 sm:h-36)
+    - Bigger logo on login page (h-44 sm:h-52)
     - Visible logo in header (mobile & desktop)
-    - Updated favicon.ico
+    - Updated favicon.ico with white background
+18. ✅ **Server.py Refactoring Complete** (April 1, 2026) - Major backend cleanup:
+    - Split 2000+ line server.py into modular route files
+    - `/routes/auth.py` - Authentication (login, register, verify, Google OAuth)
+    - `/routes/income.py` - Income CRUD operations
+    - `/routes/expenses.py` - Expense CRUD with budget notifications
+    - `/routes/budgets.py` - Budget limits and status
+    - `/routes/recurring.py` - Recurring transactions
+    - `/routes/notifications.py` - In-app notification system
+    - `/routes/analytics.py` - Dashboard and reports
+    - `/routes/users.py` - User profile and settings
+    - `/routes/misc.py` - Products, categories, import/export
+    - `/database.py` - MongoDB connection and auth dependencies
+    - Server.py now only ~113 lines
+19. ✅ **SendGrid Email Integration** (April 1, 2026)
+    - Real email verification via SendGrid
+    - Password reset emails via SendGrid
+    - Falls back to demo mode (shows code on screen) if SendGrid not configured
+    - `/email_service.py` - SendGrid API integration
 
 ## Future/Backlog
 - Currency conversion with live exchange rates
-- Email notifications for budget alerts
-- Complete server.py refactoring into /routes directory (partial done - models.py created)
-- Real email verification via SendGrid (currently demo mode)
+- Email notifications for budget alerts (via SendGrid)
