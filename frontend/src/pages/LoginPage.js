@@ -294,11 +294,11 @@ export const LoginPage = () => {
           {/* Landing View */}
           {view === 'landing' && (
             <div className="text-center">
-              <div className="mb-8">
+              <div className="mb-6">
                 <img 
                   src="/logo-full.png" 
                   alt="KitaTracker" 
-                  className="h-28 sm:h-36 w-auto mx-auto drop-shadow-2xl" 
+                  className="h-44 sm:h-52 w-auto mx-auto drop-shadow-2xl" 
                 />
               </div>
               
