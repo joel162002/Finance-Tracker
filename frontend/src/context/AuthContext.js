@@ -20,17 +20,31 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      // Only restore session if email is verified (or it's an OAuth user)
+      if (parsedUser.email_verified || parsedUser.auth_provider === 'google') {
+        setToken(storedToken);
+        setUser(parsedUser);
+      } else {
+        // Clear invalid session
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
   const login = (userData, authToken) => {
+    // Only allow login if email is verified or OAuth user
+    if (!userData.email_verified && userData.auth_provider !== 'google') {
+      console.warn('Attempted to login with unverified email');
+      return false;
+    }
     setUser(userData);
     setToken(authToken);
     localStorage.setItem('token', authToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    return true;
   };
 
   const logout = () => {
@@ -38,6 +52,9 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('pending_token');
+    localStorage.removeItem('pending_user');
+    localStorage.removeItem('pending_password');
   };
 
   const updateUser = (userData) => {
@@ -52,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-    isAuthenticated: !!token
+    isAuthenticated: !!token && !!user
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

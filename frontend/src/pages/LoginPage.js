@@ -81,9 +81,25 @@ export const LoginPage = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
-      const message = error.response?.data?.detail || 'Invalid email or password';
-      toast.error(message);
-      setErrors({ general: message });
+      // Check if it's a verification required error
+      const errorDetail = error.response?.data?.detail;
+      if (error.response?.status === 403 && typeof errorDetail === 'object' && errorDetail.requires_verification) {
+        // Store pending credentials for after verification
+        localStorage.setItem('pending_token', `token-pending-${signInEmail}`);
+        localStorage.setItem('pending_user', JSON.stringify({ email: signInEmail }));
+        localStorage.setItem('pending_password', signInPassword);
+        
+        setPendingVerificationEmail(signInEmail);
+        if (errorDetail.demo_verification_code) {
+          setDemoVerificationCode(errorDetail.demo_verification_code);
+        }
+        toast.info('Please verify your email to continue.');
+        setView('verify');
+      } else {
+        const message = typeof errorDetail === 'string' ? errorDetail : 'Invalid email or password';
+        toast.error(message);
+        setErrors({ general: message });
+      }
     } finally {
       setLoading(false);
     }
@@ -152,7 +168,31 @@ export const LoginPage = () => {
         verification_code: verificationCodeInput
       });
       
-      // Get stored credentials and login
+      // Check if we have stored password (came from login flow)
+      const storedPassword = localStorage.getItem('pending_password');
+      
+      if (storedPassword) {
+        // Re-login now that email is verified
+        try {
+          const loginResponse = await axios.post(`${API}/auth/login`, {
+            email: pendingVerificationEmail,
+            password: storedPassword
+          });
+          
+          localStorage.removeItem('pending_token');
+          localStorage.removeItem('pending_user');
+          localStorage.removeItem('pending_password');
+          
+          login(loginResponse.data.user, loginResponse.data.token);
+          toast.success('Email verified! Welcome to KitaTracker.');
+          navigate('/dashboard');
+          return;
+        } catch (loginError) {
+          console.error('Re-login failed:', loginError);
+        }
+      }
+      
+      // Get stored credentials and login (registration flow)
       const token = localStorage.getItem('pending_token');
       const user = JSON.parse(localStorage.getItem('pending_user') || '{}');
       
@@ -161,6 +201,7 @@ export const LoginPage = () => {
       
       localStorage.removeItem('pending_token');
       localStorage.removeItem('pending_user');
+      localStorage.removeItem('pending_password');
       
       login(user, token);
       toast.success('Email verified! Welcome to KitaTracker.');

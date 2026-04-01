@@ -277,6 +277,36 @@ async def login(request: LoginRequest):
     if stored_password != request.password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Check if email is verified
+    if not user_doc.get("email_verified", False):
+        # Generate new verification code
+        verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        
+        await db.email_verifications.delete_many({"email": request.email})
+        await db.email_verifications.insert_one({
+            "email": request.email,
+            "verification_code": verification_code,
+            "user_id": user_doc.get("id") or user_doc.get("user_id"),
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15)
+        })
+        
+        # Send verification email
+        email_sent = await send_verification_email(request.email, verification_code, user_doc.get("name", "User"))
+        
+        logger.info(f"Email verification code for {request.email}: {verification_code}")
+        
+        response = {
+            "requires_verification": True,
+            "email": request.email,
+            "message": "Please verify your email to continue"
+        }
+        
+        if not email_sent:
+            response["demo_verification_code"] = verification_code
+        
+        raise HTTPException(status_code=403, detail=response)
+    
     # Remove password from response
     user_response = {k: v for k, v in user_doc.items() if k != "password"}
     
