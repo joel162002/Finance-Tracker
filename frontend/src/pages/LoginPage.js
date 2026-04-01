@@ -295,7 +295,12 @@ export const LoginPage = () => {
           {view === 'landing' && (
             <div className="text-center">
               <div className="mb-6">
-                <img src="/logo.png" alt="KitaTracker" className="w-20 h-auto mx-auto drop-shadow-2xl" />
+                <img 
+                  src="/logo-full.png" 
+                  alt="KitaTracker" 
+                  className="h-16 sm:h-20 w-auto mx-auto drop-shadow-2xl" 
+                  style={{ borderRadius: '8px' }}
+                />
               </div>
               
               <h1 className="text-xl font-bold mb-8 leading-relaxed">

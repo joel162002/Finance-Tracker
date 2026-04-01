@@ -76,17 +76,14 @@ export const Layout = ({ children }) => {
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0">
               <img 
-                src="/logo-64x64.png" 
+                src="/logo-full.png" 
                 alt="KitaTracker" 
-                className="h-10 w-auto flex-shrink-0"
+                className="h-9 sm:h-10 w-auto"
+                style={{ borderRadius: '8px' }}
               />
-              <h1 className="text-base sm:text-lg md:text-xl font-medium text-slate-900 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                <span className="hidden sm:inline">KitaTracker</span>
-                <span className="sm:hidden">KitaTracker</span>
-              </h1>
-            </div>
+            </Link>
 
             <div className="hidden lg:flex items-center gap-1">
               {navigation.map((item) => {
