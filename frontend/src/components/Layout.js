@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { NotificationDropdown } from './NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -30,7 +31,8 @@ import {
   PiggyBank,
   User,
   KeyRound,
-  Trash2
+  Trash2,
+  Bell
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -130,6 +132,9 @@ export const Layout = ({ children }) => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Notification Bell */}
+              <NotificationDropdown />
 
               {/* User Profile Dropdown */}
               <DropdownMenu>

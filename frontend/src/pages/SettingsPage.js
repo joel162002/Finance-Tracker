@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { useNotifications } from '../context/NotificationContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -30,16 +32,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Calendar, Bell } from 'lucide-react';
 import { getDayName, getCurrentMonth } from '../utils/date';
 
 import { BackupRestore } from '../components/BackupRestore';
 
 export const SettingsPage = () => {
   const { formatCurrency, getCurrencySymbol } = useCurrency();
+  const { preferences, updatePreferences } = useNotifications();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -250,6 +254,7 @@ export const SettingsPage = () => {
           <TabsList className="bg-white border border-slate-200 inline-flex min-w-full sm:min-w-0">
             <TabsTrigger value="products" data-testid="products-tab" className="text-xs sm:text-sm whitespace-nowrap">Products</TabsTrigger>
             <TabsTrigger value="categories" data-testid="categories-tab" className="text-xs sm:text-sm whitespace-nowrap">Categories</TabsTrigger>
+            <TabsTrigger value="notifications" data-testid="notifications-tab" className="text-xs sm:text-sm whitespace-nowrap">Notifications</TabsTrigger>
             <TabsTrigger value="import" data-testid="import-tab" className="text-xs sm:text-sm whitespace-nowrap">Import</TabsTrigger>
             <TabsTrigger value="backup" data-testid="backup-tab" className="text-xs sm:text-sm whitespace-nowrap">Backup</TabsTrigger>
           </TabsList>
@@ -377,6 +382,145 @@ export const SettingsPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Notifications Preferences Tab */}
+        <TabsContent value="notifications">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200">
+            <div className="mb-6">
+              <h3 className="text-xl font-medium text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Notification Preferences
+              </h3>
+              <p className="text-sm text-slate-600">
+                Configure how and when you receive notifications.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Master Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5 text-slate-600" />
+                  <div>
+                    <Label className="text-base font-medium">Enable Notifications</Label>
+                    <p className="text-sm text-slate-500">Receive in-app notifications</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={preferences.enable_notifications}
+                  onCheckedChange={async (checked) => {
+                    setSavingPrefs(true);
+                    await updatePreferences({ enable_notifications: checked });
+                    setSavingPrefs(false);
+                    toast.success(checked ? 'Notifications enabled' : 'Notifications disabled');
+                  }}
+                  disabled={savingPrefs}
+                  data-testid="enable-notifications-toggle"
+                />
+              </div>
+
+              {/* Budget Alerts */}
+              <div className={`space-y-4 ${!preferences.enable_notifications ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+                  <div>
+                    <Label className="text-base font-medium">Budget Alerts</Label>
+                    <p className="text-sm text-slate-500">Get notified when spending reaches budget thresholds</p>
+                  </div>
+                  <Switch
+                    checked={preferences.budget_alerts}
+                    onCheckedChange={async (checked) => {
+                      setSavingPrefs(true);
+                      await updatePreferences({ budget_alerts: checked });
+                      setSavingPrefs(false);
+                      toast.success(checked ? 'Budget alerts enabled' : 'Budget alerts disabled');
+                    }}
+                    disabled={savingPrefs || !preferences.enable_notifications}
+                    data-testid="budget-alerts-toggle"
+                  />
+                </div>
+
+                {/* Budget Thresholds */}
+                {preferences.budget_alerts && (
+                  <div className="ml-4 p-4 bg-slate-50 rounded-xl space-y-4">
+                    <div>
+                      <Label>Warning Threshold (%)</Label>
+                      <div className="flex items-center gap-3 mt-2">
+                        <Input
+                          type="number"
+                          min="50"
+                          max="95"
+                          value={preferences.threshold_warning || 80}
+                          onChange={async (e) => {
+                            const value = parseInt(e.target.value);
+                            if (value >= 50 && value <= 95) {
+                              setSavingPrefs(true);
+                              await updatePreferences({ threshold_warning: value });
+                              setSavingPrefs(false);
+                            }
+                          }}
+                          className="w-24 rounded-xl"
+                          data-testid="threshold-warning-input"
+                        />
+                        <span className="text-sm text-amber-600 font-medium">🟡 Warning at {preferences.threshold_warning || 80}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Danger Threshold (%)</Label>
+                      <div className="flex items-center gap-3 mt-2">
+                        <Input
+                          type="number"
+                          min="60"
+                          max="99"
+                          value={preferences.threshold_danger || 90}
+                          onChange={async (e) => {
+                            const value = parseInt(e.target.value);
+                            if (value >= 60 && value <= 99) {
+                              setSavingPrefs(true);
+                              await updatePreferences({ threshold_danger: value });
+                              setSavingPrefs(false);
+                            }
+                          }}
+                          className="w-24 rounded-xl"
+                          data-testid="threshold-danger-input"
+                        />
+                        <span className="text-sm text-orange-600 font-medium">🔴 Danger at {preferences.threshold_danger || 90}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recurring Alerts */}
+                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+                  <div>
+                    <Label className="text-base font-medium">Recurring Transaction Alerts</Label>
+                    <p className="text-sm text-slate-500">Get notified when recurring transactions are due or created</p>
+                  </div>
+                  <Switch
+                    checked={preferences.recurring_alerts}
+                    onCheckedChange={async (checked) => {
+                      setSavingPrefs(true);
+                      await updatePreferences({ recurring_alerts: checked });
+                      setSavingPrefs(false);
+                      toast.success(checked ? 'Recurring alerts enabled' : 'Recurring alerts disabled');
+                    }}
+                    disabled={savingPrefs || !preferences.enable_notifications}
+                    data-testid="recurring-alerts-toggle"
+                  />
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <h4 className="font-medium text-blue-900 mb-2">How notifications work</h4>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Budget alerts trigger when spending reaches your configured thresholds</li>
+                  <li>Recurring alerts notify you when transactions are due or auto-created</li>
+                  <li>Notifications are kept for 15 days, then automatically deleted</li>
+                  <li>Click the bell icon in the header to view your notifications</li>
+                </ul>
+              </div>
             </div>
           </div>
         </TabsContent>

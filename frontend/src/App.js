@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallback } from './pages/AuthCallback';
 import { DashboardPage } from './pages/DashboardPage';
@@ -14,6 +15,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { RecurringPage } from './pages/RecurringPage';
 import { BudgetsPage } from './pages/BudgetsPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { Layout } from './components/Layout';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
@@ -185,6 +187,17 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/notifications"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <NotificationsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
@@ -194,13 +207,15 @@ function App() {
   return (
     <AuthProvider>
       <CurrencyProvider>
-        <DataProvider>
-          <BrowserRouter>
-            <AppRouter />
-            <InstallPrompt />
-            <Toaster position="top-right" />
-          </BrowserRouter>
-        </DataProvider>
+        <NotificationProvider>
+          <DataProvider>
+            <BrowserRouter>
+              <AppRouter />
+              <InstallPrompt />
+              <Toaster position="top-right" />
+            </BrowserRouter>
+          </DataProvider>
+        </NotificationProvider>
       </CurrencyProvider>
     </AuthProvider>
   );

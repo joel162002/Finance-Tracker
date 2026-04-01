@@ -295,6 +295,38 @@ class BudgetLimitUpdate(BaseModel):
     currency: Optional[str] = None
     alert_threshold: Optional[float] = None
 
+# ============ NOTIFICATION MODELS ============
+
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    type: str  # budget_warning, budget_danger, budget_exceeded, recurring_due, recurring_created, system_info
+    title: str
+    message: str
+    related_entity_type: Optional[str] = None  # budget, recurring, expense, income
+    related_entity_id: Optional[str] = None
+    is_read: bool = False
+    priority: str = "normal"  # low, normal, high
+    action_url: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class NotificationPreferences(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    user_id: str
+    enable_notifications: bool = True
+    budget_alerts: bool = True
+    recurring_alerts: bool = True
+    threshold_warning: int = 80  # Percentage
+    threshold_danger: int = 90   # Percentage
+
+class NotificationPreferencesUpdate(BaseModel):
+    enable_notifications: Optional[bool] = None
+    budget_alerts: Optional[bool] = None
+    recurring_alerts: Optional[bool] = None
+    threshold_warning: Optional[int] = None
+    threshold_danger: Optional[int] = None
+
 # ============ AUTH ENDPOINTS ============
 
 class RegisterRequest(BaseModel):
@@ -818,6 +850,9 @@ async def generate_recurring_entries(user_id: str = Depends(require_auth)):
             else:
                 await db.expense_entries.insert_one(entry_doc)
                 generated_count["expense"] += 1
+                # Check budget notification for auto-generated expenses
+                month = entry_doc["date"][:7]
+                await check_budget_and_notify(user_id, trans["category_or_product"], month)
             generated_entries.append({
                 "type": entry_type,
                 "date": entry_doc["date"],
@@ -825,11 +860,24 @@ async def generate_recurring_entries(user_id: str = Depends(require_auth)):
                 "description": trans["description"]
             })
         
-        # Update last_generated if we created any entries
+        # Update last_generated and create notification if we created any entries
         if entries_to_create:
             await db.recurring_transactions.update_one(
                 {"id": trans["id"], "user_id": user_id},
                 {"$set": {"last_generated": last_generated}}
+            )
+            
+            # Create notification for auto-generated entries
+            type_label = "income" if trans["type"] == "income" else "expense"
+            await create_notification(
+                user_id=user_id,
+                notification_type="recurring_created",
+                title=f"Recurring {type_label.title()} Created",
+                message=f"'{trans['description']}' auto-generated {len(entries_to_create)} {type_label} entries.",
+                related_entity_type="recurring",
+                related_entity_id=trans.get("id"),
+                priority="low",
+                action_url=f"/{type_label}"
             )
     
     return {
@@ -1064,6 +1112,293 @@ async def google_auth_callback(session_id: str = Query(...)):
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Authentication service error: {str(e)}")
 
+# ============ NOTIFICATION ENDPOINTS ============
+
+async def create_notification(
+    user_id: str,
+    notification_type: str,
+    title: str,
+    message: str,
+    related_entity_type: str = None,
+    related_entity_id: str = None,
+    priority: str = "normal",
+    action_url: str = None
+):
+    """Helper function to create a notification"""
+    # Check user preferences
+    prefs = await db.notification_preferences.find_one({"user_id": user_id}, {"_id": 0})
+    if not prefs:
+        prefs = {"enable_notifications": True, "budget_alerts": True, "recurring_alerts": True}
+    
+    if not prefs.get("enable_notifications", True):
+        return None
+    
+    # Check specific preference
+    if notification_type.startswith("budget_") and not prefs.get("budget_alerts", True):
+        return None
+    if notification_type.startswith("recurring_") and not prefs.get("recurring_alerts", True):
+        return None
+    
+    notification = Notification(
+        user_id=user_id,
+        type=notification_type,
+        title=title,
+        message=message,
+        related_entity_type=related_entity_type,
+        related_entity_id=related_entity_id,
+        priority=priority,
+        action_url=action_url
+    )
+    
+    await db.notifications.insert_one(notification.model_dump())
+    return notification
+
+async def check_budget_and_notify(user_id: str, category: str, month: str):
+    """Check budget thresholds and create notifications if needed"""
+    # Get budget for this category and month
+    budget = await db.budget_limits.find_one(
+        {"user_id": user_id, "category": category, "month": month},
+        {"_id": 0}
+    )
+    
+    if not budget:
+        return
+    
+    # Get total spending for this category in this month
+    pipeline = [
+        {"$match": {
+            "user_id": user_id,
+            "category_name": category,
+            "date": {"$regex": f"^{month}"}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    result = await db.expense_entries.aggregate(pipeline).to_list(1)
+    current_spending = result[0]["total"] if result else 0
+    
+    limit_amount = budget.get("limit_amount", 0)
+    if limit_amount <= 0:
+        return
+    
+    percentage = (current_spending / limit_amount) * 100
+    
+    # Get user preferences for thresholds
+    prefs = await db.notification_preferences.find_one({"user_id": user_id}, {"_id": 0})
+    threshold_warning = prefs.get("threshold_warning", 80) if prefs else 80
+    threshold_danger = prefs.get("threshold_danger", 90) if prefs else 90
+    
+    # Check for existing notifications to avoid duplicates
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    if percentage >= 100:
+        # Check if we already sent an exceeded notification today
+        existing = await db.notifications.find_one({
+            "user_id": user_id,
+            "type": "budget_exceeded",
+            "related_entity_id": budget.get("id"),
+            "created_at": {"$regex": f"^{today}"}
+        })
+        if not existing:
+            await create_notification(
+                user_id=user_id,
+                notification_type="budget_exceeded",
+                title=f"{category} Budget Exceeded!",
+                message=f"You've spent {percentage:.0f}% of your {category} budget for {month}.",
+                related_entity_type="budget",
+                related_entity_id=budget.get("id"),
+                priority="high",
+                action_url="/budgets"
+            )
+    elif percentage >= threshold_danger:
+        existing = await db.notifications.find_one({
+            "user_id": user_id,
+            "type": "budget_danger",
+            "related_entity_id": budget.get("id"),
+            "created_at": {"$regex": f"^{today}"}
+        })
+        if not existing:
+            await create_notification(
+                user_id=user_id,
+                notification_type="budget_danger",
+                title=f"{category} Budget Almost Exhausted",
+                message=f"You've used {percentage:.0f}% of your {category} budget. Only {100-percentage:.0f}% remaining.",
+                related_entity_type="budget",
+                related_entity_id=budget.get("id"),
+                priority="high",
+                action_url="/budgets"
+            )
+    elif percentage >= threshold_warning:
+        existing = await db.notifications.find_one({
+            "user_id": user_id,
+            "type": "budget_warning",
+            "related_entity_id": budget.get("id"),
+            "created_at": {"$regex": f"^{today}"}
+        })
+        if not existing:
+            await create_notification(
+                user_id=user_id,
+                notification_type="budget_warning",
+                title=f"{category} Budget Warning",
+                message=f"You've used {percentage:.0f}% of your {category} budget for {month}.",
+                related_entity_type="budget",
+                related_entity_id=budget.get("id"),
+                priority="normal",
+                action_url="/budgets"
+            )
+
+async def cleanup_old_notifications():
+    """Delete notifications older than 15 days"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+    await db.notifications.delete_many({"created_at": {"$lt": cutoff}})
+
+@api_router.get("/notifications")
+async def get_notifications(
+    limit: int = 50,
+    unread_only: bool = False,
+    user_id: str = Depends(require_auth)
+):
+    """Get notifications for the current user"""
+    # Clean up old notifications
+    await cleanup_old_notifications()
+    
+    query = {"user_id": user_id}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Get unread count
+    unread_count = await db.notifications.count_documents({"user_id": user_id, "is_read": False})
+    
+    return {
+        "notifications": notifications,
+        "unread_count": unread_count
+    }
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user_id: str = Depends(require_auth)):
+    """Mark a notification as read"""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": user_id},
+        {"$set": {"is_read": True}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(user_id: str = Depends(require_auth)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": user_id, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str, user_id: str = Depends(require_auth)):
+    """Delete a notification"""
+    result = await db.notifications.delete_one({"id": notification_id, "user_id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification deleted"}
+
+@api_router.delete("/notifications")
+async def clear_all_notifications(user_id: str = Depends(require_auth)):
+    """Clear all notifications for the user"""
+    await db.notifications.delete_many({"user_id": user_id})
+    return {"message": "All notifications cleared"}
+
+@api_router.get("/notifications/preferences")
+async def get_notification_preferences(user_id: str = Depends(require_auth)):
+    """Get notification preferences for the user"""
+    prefs = await db.notification_preferences.find_one({"user_id": user_id}, {"_id": 0})
+    if not prefs:
+        # Return defaults
+        prefs = {
+            "user_id": user_id,
+            "enable_notifications": True,
+            "budget_alerts": True,
+            "recurring_alerts": True,
+            "threshold_warning": 80,
+            "threshold_danger": 90
+        }
+    return prefs
+
+@api_router.put("/notifications/preferences")
+async def update_notification_preferences(
+    prefs: NotificationPreferencesUpdate,
+    user_id: str = Depends(require_auth)
+):
+    """Update notification preferences"""
+    update_data = {k: v for k, v in prefs.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    await db.notification_preferences.update_one(
+        {"user_id": user_id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    # Fetch and return updated preferences
+    updated_prefs = await db.notification_preferences.find_one({"user_id": user_id}, {"_id": 0})
+    return updated_prefs
+
+@api_router.get("/notifications/check-recurring")
+async def check_recurring_notifications(user_id: str = Depends(require_auth)):
+    """Check for due recurring transactions and create notifications"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Get active recurring transactions
+    recurring = await db.recurring_transactions.find(
+        {"user_id": user_id, "is_active": True},
+        {"_id": 0}
+    ).to_list(100)
+    
+    notifications_created = 0
+    
+    for trans in recurring:
+        start_date = trans.get("start_date", today)
+        last_generated = trans.get("last_generated")
+        frequency = trans.get("frequency", "monthly")
+        
+        # Calculate next due date
+        if last_generated:
+            next_due = calculate_next_date(last_generated, frequency)
+        else:
+            next_due = start_date
+        
+        # Check if due today or overdue
+        if next_due <= today:
+            # Check if we already notified today
+            existing = await db.notifications.find_one({
+                "user_id": user_id,
+                "type": "recurring_due",
+                "related_entity_id": trans.get("id"),
+                "created_at": {"$regex": f"^{today}"}
+            })
+            
+            if not existing:
+                type_label = "income" if trans.get("type") == "income" else "expense"
+                await create_notification(
+                    user_id=user_id,
+                    notification_type="recurring_due",
+                    title=f"Recurring {type_label.title()} Due",
+                    message=f"'{trans.get('description')}' ({trans.get('frequency')}) is due today.",
+                    related_entity_type="recurring",
+                    related_entity_id=trans.get("id"),
+                    priority="normal",
+                    action_url="/recurring"
+                )
+                notifications_created += 1
+    
+    return {"notifications_created": notifications_created}
+
 # ============ PRODUCT ENDPOINTS ============
 
 @api_router.get("/products", response_model=List[Product])
@@ -1244,12 +1579,21 @@ async def create_expense(expense: ExpenseEntryCreate, user_id: str = Depends(req
     expense_obj = ExpenseEntry(user_id=user_id, **expense.model_dump())
     doc = expense_obj.model_dump()
     await db.expense_entries.insert_one(doc)
+    
+    # Check budget and create notification if threshold reached
+    if expense_obj.category_name and expense_obj.date:
+        month = expense_obj.date[:7]  # Extract YYYY-MM
+        await check_budget_and_notify(user_id, expense_obj.category_name, month)
+    
     return expense_obj
 
 @api_router.put("/expenses/{expense_id}", response_model=ExpenseEntry)
 async def update_expense(expense_id: str, expense: ExpenseEntryUpdate, user_id: str = Depends(require_auth)):
     update_data = {k: v for k, v in expense.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Get existing expense to check category
+    existing = await db.expense_entries.find_one({"id": expense_id, "user_id": user_id}, {"_id": 0})
     
     # Only update if entry belongs to authenticated user
     result = await db.expense_entries.update_one(
@@ -1260,6 +1604,18 @@ async def update_expense(expense_id: str, expense: ExpenseEntryUpdate, user_id: 
         raise HTTPException(status_code=404, detail="Expense entry not found")
     
     updated_doc = await db.expense_entries.find_one({"id": expense_id, "user_id": user_id}, {"_id": 0})
+    
+    # Check budget for both old and new categories
+    if existing:
+        old_category = existing.get("category_name")
+        new_category = updated_doc.get("category_name")
+        month = updated_doc.get("date", "")[:7]
+        
+        if old_category and month:
+            await check_budget_and_notify(user_id, old_category, month)
+        if new_category and new_category != old_category and month:
+            await check_budget_and_notify(user_id, new_category, month)
+    
     return ExpenseEntry(**updated_doc)
 
 @api_router.delete("/expenses/{expense_id}")
