@@ -135,7 +135,7 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 - Main: joeljalapitjr@gmail.com / joelpogi
 - Demo: demo@finance.com / demo123
 
-## Recent Updates (March 31, 2026)
+## Recent Updates (March 31 - April 1, 2026)
 1. ✅ Recurring transactions (income/expenses)
 2. ✅ Budget limits with alerts
 3. ✅ Currency selector in header
@@ -151,6 +151,15 @@ Build a clean, modern, mobile-friendly web application for personal business fin
 13. ✅ **Import with custom month** - Target Month picker in import dialog lets users import data to any month
 14. ✅ **UI/Chart improvements** - Donut-style pie charts, responsive bar/line charts, angled labels on Reports page
 15. ✅ **Partial refactoring** - Created /app/backend/models.py with centralized data models
+16. ✅ **In-App Notification System** - Complete notification center with:
+    - Bell icon in header with unread count badge
+    - Dropdown showing recent notifications
+    - Full /notifications page
+    - Budget alerts (warning at 80%, danger at 90%, exceeded at 100%)
+    - Recurring transaction alerts (due, created)
+    - Mark as read, mark all read, delete, clear all
+    - Notification preferences in Settings (enable/disable, thresholds)
+    - 15-day auto-cleanup
 
 ## Future/Backlog
 - Currency conversion with live exchange rates
