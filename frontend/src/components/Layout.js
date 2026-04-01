@@ -193,11 +193,11 @@ export const Layout = ({ children }) => {
               </Button>
             </div>
 
-            {/* Mobile: Currency + Menu */}
-            <div className="flex lg:hidden items-center gap-2">
+            {/* Mobile: Currency + Notifications + Menu */}
+            <div className="flex lg:hidden items-center gap-1.5">
               {/* Mobile Currency Selector */}
               <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
-                <SelectTrigger className="w-[70px] h-9 rounded-lg border-slate-200 text-sm" data-testid="mobile-currency-select">
+                <SelectTrigger className="w-[65px] h-9 rounded-lg border-slate-200 text-sm" data-testid="mobile-currency-select">
                   <SelectValue>
                     <span className="font-mono">{currencyInfo[currency]?.symbol}</span>
                   </SelectValue>
@@ -213,6 +213,9 @@ export const Layout = ({ children }) => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Mobile Notification Bell */}
+              <NotificationDropdown />
 
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
