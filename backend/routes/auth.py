@@ -10,7 +10,7 @@ import logging
 import bcrypt
 
 from database import db, require_auth
-from email_service import send_verification_email, send_password_reset_email, is_sendgrid_configured
+from email_service import send_verification_email, send_password_reset_email, is_email_configured
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("auth")
@@ -346,18 +346,20 @@ async def google_auth_callback(session_id: str = Query(...)):
             existing_user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
             
             if existing_user:
-                # Update existing user
+                # Update existing user - Google users are always verified
                 await db.users.update_one(
                     {"email": google_data["email"]},
                     {"$set": {
                         "name": google_data.get("name", existing_user.get("name")),
                         "picture": google_data.get("picture"),
+                        "auth_provider": "google",
+                        "email_verified": True,
                         "last_login": datetime.now(timezone.utc).isoformat()
                     }}
                 )
                 user_doc = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
             else:
-                # Create new user from Google data
+                # Create new user from Google data - Google users are automatically verified
                 user_id = f"user_{uuid.uuid4().hex[:12]}"
                 new_user = {
                     "id": user_id,
@@ -367,6 +369,7 @@ async def google_auth_callback(session_id: str = Query(...)):
                     "username": google_data["email"].split("@")[0],
                     "picture": google_data.get("picture"),
                     "auth_provider": "google",
+                    "email_verified": True,  # Google users are pre-verified
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.users.insert_one(new_user)

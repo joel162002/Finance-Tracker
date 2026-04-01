@@ -1,32 +1,43 @@
 """
-Email service using SendGrid
+Email service using Resend API
 """
 import os
+import asyncio
 import logging
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import resend
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment variables
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
 
 logger = logging.getLogger("email_service")
 
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-SENDGRID_FROM_EMAIL = os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@kitatracker.com')
+# Resend configuration
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 
-def is_sendgrid_configured() -> bool:
-    """Check if SendGrid is configured"""
-    return bool(SENDGRID_API_KEY and len(SENDGRID_API_KEY) > 10)
+# Initialize Resend
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+def is_email_configured() -> bool:
+    """Check if Resend is configured"""
+    return bool(RESEND_API_KEY and len(RESEND_API_KEY) > 5)
 
 async def send_verification_email(to_email: str, verification_code: str, username: str = "User") -> bool:
-    """Send email verification code via SendGrid"""
-    if not is_sendgrid_configured():
-        logger.warning("SendGrid not configured, skipping email send")
+    """Send email verification code via Resend"""
+    if not is_email_configured():
+        logger.warning("Resend not configured, skipping email send")
         return False
     
     try:
-        message = Mail(
-            from_email=SENDGRID_FROM_EMAIL,
-            to_emails=to_email,
-            subject='Verify your KitaTracker account',
-            html_content=f'''
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [to_email],
+            "subject": "Verify your KitaTracker account",
+            "html": f'''
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h1 style="color: #10b981; margin: 0;">KitaTracker</h1>
@@ -50,28 +61,28 @@ async def send_verification_email(to_email: str, verification_code: str, usernam
                 </div>
             </div>
             '''
-        )
+        }
         
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        logger.info(f"Verification email sent to {to_email}, status: {response.status_code}")
-        return response.status_code in [200, 201, 202]
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        email = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Verification email sent to {to_email}, id: {email.get('id')}")
+        return True
     except Exception as e:
         logger.error(f"Failed to send verification email to {to_email}: {str(e)}")
         return False
 
 async def send_password_reset_email(to_email: str, reset_code: str) -> bool:
-    """Send password reset code via SendGrid"""
-    if not is_sendgrid_configured():
-        logger.warning("SendGrid not configured, skipping email send")
+    """Send password reset code via Resend"""
+    if not is_email_configured():
+        logger.warning("Resend not configured, skipping email send")
         return False
     
     try:
-        message = Mail(
-            from_email=SENDGRID_FROM_EMAIL,
-            to_emails=to_email,
-            subject='Reset your KitaTracker password',
-            html_content=f'''
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [to_email],
+            "subject": "Reset your KitaTracker password",
+            "html": f'''
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h1 style="color: #10b981; margin: 0;">KitaTracker</h1>
@@ -94,12 +105,12 @@ async def send_password_reset_email(to_email: str, reset_code: str) -> bool:
                 </div>
             </div>
             '''
-        )
+        }
         
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        logger.info(f"Password reset email sent to {to_email}, status: {response.status_code}")
-        return response.status_code in [200, 201, 202]
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        email = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Password reset email sent to {to_email}, id: {email.get('id')}")
+        return True
     except Exception as e:
         logger.error(f"Failed to send password reset email to {to_email}: {str(e)}")
         return False
