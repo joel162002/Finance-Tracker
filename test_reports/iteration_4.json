@@ -85,6 +85,6 @@
   "testing_environment": {
     "mobile_viewport": "390x844",
     "desktop_viewport": "1920x1080",
-    "backend_url": "https://kita-currency-fix.preview.emergentagent.com"
+    "backend_url": "https://tracker-preview-10.preview.emergentagent.com"
   }
 }

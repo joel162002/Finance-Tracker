@@ -160,6 +160,11 @@ Build a clean, modern, mobile-friendly web application for personal business fin
     - Mark as read, mark all read, delete, clear all
     - Notification preferences in Settings (enable/disable, thresholds)
     - 15-day auto-cleanup
+17. ✅ **Updated App Logo & Favicon** (April 1, 2026) - New KitaTracker eye logo with green/blue gradient
+    - Updated all PWA icons (16x16 to 512x512)
+    - Bigger logo on login page (h-28 sm:h-36)
+    - Visible logo in header (mobile & desktop)
+    - Updated favicon.ico
 
 ## Future/Backlog
 - Currency conversion with live exchange rates

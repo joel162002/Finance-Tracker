@@ -80,8 +80,7 @@ export const Layout = ({ children }) => {
               <img 
                 src="/logo-full.png" 
                 alt="KitaTracker" 
-                className="h-9 sm:h-10 w-auto"
-                style={{ borderRadius: '8px' }}
+                className="h-11 sm:h-12 w-auto"
               />
             </Link>
 
