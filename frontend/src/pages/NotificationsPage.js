@@ -134,36 +134,36 @@ export const NotificationsPage = () => {
             {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="rounded-xl"
+            className="rounded-xl text-xs sm:text-sm"
             data-testid="refresh-notifications-btn"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           {unreadCount > 0 && (
             <Button
               variant="outline"
               onClick={markAllAsRead}
-              className="rounded-xl"
+              className="rounded-xl text-xs sm:text-sm"
               data-testid="mark-all-read-page-btn"
             >
-              <CheckCheck className="w-4 h-4 mr-2" />
-              Mark all read
+              <CheckCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Mark all</span> read
             </Button>
           )}
           {notifications.length > 0 && (
             <Button
               variant="outline"
               onClick={() => setClearDialogOpen(true)}
-              className="rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="rounded-xl text-xs sm:text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
               data-testid="clear-all-btn"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Clear all
             </Button>
           )}
