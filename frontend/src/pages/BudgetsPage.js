@@ -33,7 +33,7 @@ import {
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, PiggyBank, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react';
 
-const COMMON_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'Total (All Expenses)',
   'Food',
   'Transportation',
@@ -56,6 +56,7 @@ export const BudgetsPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [expenseCategories, setExpenseCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     category: 'total',
@@ -66,11 +67,29 @@ export const BudgetsPage = () => {
 
   useEffect(() => {
     fetchBudgetStatus();
+    fetchExpenseCategories();
   }, [selectedMonth]);
 
   useEffect(() => {
     setFormData(prev => ({ ...prev, currency }));
   }, [currency]);
+
+  const fetchExpenseCategories = async () => {
+    try {
+      const response = await api.get('/suggestions/categories');
+      const categories = response.data.suggestions || [];
+      setExpenseCategories(categories);
+    } catch (error) {
+      console.error('Failed to fetch expense categories:', error);
+    }
+  };
+
+  // Combine default and expense categories, remove duplicates
+  const allCategories = [...new Set([
+    'Total (All Expenses)',
+    ...expenseCategories,
+    ...DEFAULT_CATEGORIES.filter(c => c !== 'Total (All Expenses)')
+  ])];
 
   const fetchBudgetStatus = async () => {
     try {
@@ -155,7 +174,8 @@ export const BudgetsPage = () => {
   };
 
   const getProgressColor = (percentage, isOver) => {
-    if (isOver) return 'bg-red-500';
+    if (isOver || percentage >= 100) return 'bg-red-500';
+    if (percentage >= 90) return 'bg-orange-500';
     if (percentage >= 80) return 'bg-amber-500';
     return 'bg-emerald-500';
   };
@@ -362,7 +382,7 @@ export const BudgetsPage = () => {
               <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {COMMON_CATEGORIES.map((cat) => (
+                  {allCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>

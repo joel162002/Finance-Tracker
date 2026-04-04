@@ -94,17 +94,17 @@ async def get_budget_status(month: str, user_id: str = Depends(require_auth)):
             "remaining": limit_amount - spent,
             "percentage": round(percentage, 1),
             "currency": budget.get("currency", "PHP"),
-            "is_over_budget": spent > limit_amount,
+            "is_over_budget": spent >= limit_amount,
             "is_alert": percentage >= threshold
         }
         status.append(budget_status)
         
         if percentage >= threshold:
-            alert_type = "over_budget" if spent > limit_amount else "warning"
+            alert_type = "over_budget" if spent >= limit_amount else "warning"
             alerts.append({
                 "type": alert_type,
                 "category": category,
-                "message": f"{'Over budget' if spent > limit_amount else 'Approaching limit'} for {category}: {round(percentage)}% used",
+                "message": f"{'Over budget' if spent >= limit_amount else 'Approaching limit'} for {category}: {round(percentage)}% used",
                 "percentage": round(percentage, 1)
             })
     
