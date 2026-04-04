@@ -306,6 +306,13 @@ export const Layout = ({ children }) => {
       <main className="px-4 sm:px-6 py-6 sm:py-8 md:px-12 md:py-12 max-w-[1600px] mx-auto">
         {children}
       </main>
+
+      {/* Custom Footer */}
+      <footer className="py-4 text-center border-t border-slate-100">
+        <p className="text-xs text-slate-400">
+          Built by <span className="font-medium text-slate-600">Joel Jalapit Jr.</span>
+        </p>
+      </footer>
     </div>
   );
 };
