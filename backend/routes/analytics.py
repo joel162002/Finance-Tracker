@@ -227,3 +227,78 @@ async def get_quick_summary(month: Optional[str] = None, user_id: str = Depends(
         "income_count": income_count,
         "expense_count": expense_count
     }
+
+@router.get("/monthly-comparison")
+async def get_monthly_comparison(months: int = 3, user_id: str = Depends(require_auth)):
+    """Get comparison data for multiple months (default: last 3 months)"""
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    
+    # Limit to max 6 months
+    months = min(months, 6)
+    
+    # Calculate month strings for the requested period
+    current_date = datetime.now()
+    month_data = []
+    
+    for i in range(months):
+        target_date = current_date - relativedelta(months=i)
+        month_str = target_date.strftime("%Y-%m")
+        month_label = target_date.strftime("%b %Y")
+        
+        query = {"user_id": user_id, "date": {"$regex": f"^{month_str}"}}
+        
+        # Fetch totals for this month
+        income_pipeline = [
+            {"$match": query},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]
+        expense_pipeline = [
+            {"$match": query},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]
+        
+        income_result = await db.income_entries.aggregate(income_pipeline).to_list(1)
+        expense_result = await db.expense_entries.aggregate(expense_pipeline).to_list(1)
+        
+        total_income = income_result[0]["total"] if income_result else 0
+        total_expenses = expense_result[0]["total"] if expense_result else 0
+        income_count = income_result[0]["count"] if income_result else 0
+        expense_count = expense_result[0]["count"] if expense_result else 0
+        
+        month_data.append({
+            "month": month_str,
+            "label": month_label,
+            "income": total_income,
+            "expenses": total_expenses,
+            "profit": total_income - total_expenses,
+            "income_count": income_count,
+            "expense_count": expense_count
+        })
+    
+    # Reverse so oldest is first (for chart display)
+    month_data.reverse()
+    
+    # Calculate percentage changes (current vs previous month)
+    comparison = {}
+    if len(month_data) >= 2:
+        current = month_data[-1]  # Most recent
+        previous = month_data[-2]  # Previous month
+        
+        def calc_change(current_val, previous_val):
+            if previous_val == 0:
+                return 100 if current_val > 0 else 0
+            return round(((current_val - previous_val) / previous_val) * 100, 1)
+        
+        comparison = {
+            "income_change": calc_change(current["income"], previous["income"]),
+            "expense_change": calc_change(current["expenses"], previous["expenses"]),
+            "profit_change": calc_change(current["profit"], previous["profit"]) if previous["profit"] != 0 else (100 if current["profit"] > 0 else (-100 if current["profit"] < 0 else 0)),
+            "current_month": current["label"],
+            "previous_month": previous["label"]
+        }
+    
+    return {
+        "months": month_data,
+        "comparison": comparison
+    }
