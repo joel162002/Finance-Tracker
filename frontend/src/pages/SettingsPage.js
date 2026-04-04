@@ -66,6 +66,8 @@ export const SettingsPage = () => {
   const [importMonth, setImportMonth] = useState(getCurrentMonth()); // New: Month selector
   const [parsedEntries, setParsedEntries] = useState([]);
   const [importing, setImporting] = useState(false);
+  const [lastImportBatch, setLastImportBatch] = useState(null);
+  const [undoing, setUndoing] = useState(false);
 
   const handleCurrencyChange = async (newCurrency) => {
     setChangingCurrency(true);
@@ -80,6 +82,7 @@ export const SettingsPage = () => {
 
   useEffect(() => {
     fetchData();
+    fetchLastImportBatch();
   }, []);
 
   const fetchData = async () => {
@@ -95,6 +98,19 @@ export const SettingsPage = () => {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLastImportBatch = async () => {
+    try {
+      const response = await api.get('/import/last-batch');
+      if (response.data.has_batch) {
+        setLastImportBatch(response.data.batch);
+      } else {
+        setLastImportBatch(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch last import batch:', error);
     }
   };
 
@@ -176,9 +192,11 @@ export const SettingsPage = () => {
       
       // Parse selected month (YYYY-MM format)
       const [selectedYear, selectedMonth] = importMonth.split('-').map(Number);
-      const currentDate = new Date();
       
-      const promises = parsedEntries.map(entry => {
+      // Create entries and collect their IDs
+      const createdEntryIds = [];
+      
+      for (const entry of parsedEntries) {
         // Use the day from parsed entry, or day 1 if not available
         const day = entry.day ? parseInt(entry.day) : 1;
         // Ensure day is valid for the selected month
@@ -186,8 +204,9 @@ export const SettingsPage = () => {
         const validDay = Math.min(day, maxDay);
         const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(validDay).padStart(2, '0')}`;
         
+        let response;
         if (importType === 'income') {
-          return api.post('/income', {
+          response = await api.post('/income', {
             date: dateStr,
             day: getDayName(dateStr),
             amount: entry.amount,
@@ -222,7 +241,7 @@ export const SettingsPage = () => {
             category = 'Medical';
           }
           
-          return api.post('/expenses', {
+          response = await api.post('/expenses', {
             date: dateStr,
             day: getDayName(dateStr),
             amount: entry.amount,
@@ -233,21 +252,45 @@ export const SettingsPage = () => {
             reference_number: ''
           });
         }
-      });
+        
+        // Collect the entry ID
+        if (response.data && response.data.id) {
+          createdEntryIds.push(response.data.id);
+        }
+      }
 
-      await Promise.all(promises);
+      // Save the import batch for undo functionality
+      if (createdEntryIds.length > 0) {
+        await api.post(`/import/save-batch?entry_type=${importType}`, createdEntryIds);
+        await fetchLastImportBatch(); // Refresh the last import batch
+      }
+      
       toast.success(`Successfully imported ${parsedEntries.length} ${importType} entries to ${importMonth}`);
       setImportDialogOpen(false);
       setImportText('');
       setParsedEntries([]);
       
-      // Refresh the page data if needed
-      window.location.reload();
     } catch (error) {
       console.error('Import error:', error);
       toast.error('Failed to import entries');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleUndoImport = async () => {
+    if (!lastImportBatch) return;
+    
+    try {
+      setUndoing(true);
+      const response = await api.post('/import/undo');
+      toast.success(response.data.message);
+      setLastImportBatch(null);
+    } catch (error) {
+      console.error('Undo error:', error);
+      toast.error('Failed to undo import');
+    } finally {
+      setUndoing(false);
     }
   };
 
@@ -572,14 +615,39 @@ export const SettingsPage = () => {
 
         <TabsContent value="import">
           <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200">
-            <div className="mb-6">
-              <h3 className="text-xl font-medium text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Smart Import
-              </h3>
-              <p className="text-sm text-slate-600">
-                Paste your income or expense data and let the system parse it automatically.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-xl font-medium text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Smart Import
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Paste your income or expense data and let the system parse it automatically.
+                </p>
+              </div>
             </div>
+
+            {/* Last Import Batch - Undo Option */}
+            {lastImportBatch && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">Last Import</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      {lastImportBatch.entry_count} {lastImportBatch.entry_type} entries imported on {new Date(lastImportBatch.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleUndoImport}
+                    disabled={undoing}
+                    variant="outline"
+                    className="rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                    data-testid="undo-import-button"
+                  >
+                    {undoing ? 'Undoing...' : 'Undo Import'}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <Button

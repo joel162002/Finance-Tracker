@@ -155,6 +155,15 @@ async def delete_category(category_id: str, user_id: str = Depends(require_auth)
 
 # ============ IMPORT/PARSE ENDPOINTS ============
 
+class ImportBatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    entry_type: str  # 'income' or 'expense'
+    entry_ids: List[str]  # IDs of entries created in this import
+    entry_count: int
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 @router.post("/import/parse", response_model=List[ParsedEntry])
 async def parse_import(request: ImportRequest):
     lines = request.raw_text.strip().split('\n')
@@ -203,6 +212,65 @@ async def parse_import(request: ImportRequest):
         ))
     
     return parsed_entries
+
+@router.post("/import/save-batch")
+async def save_import_batch(entry_type: str, entry_ids: List[str], user_id: str = Depends(require_auth)):
+    """Save an import batch for undo functionality"""
+    # Delete any previous import batch for this user (keep only the last one)
+    await db.import_batches.delete_many({"user_id": user_id})
+    
+    batch = ImportBatch(
+        user_id=user_id,
+        entry_type=entry_type,
+        entry_ids=entry_ids,
+        entry_count=len(entry_ids)
+    )
+    
+    await db.import_batches.insert_one(batch.model_dump())
+    
+    return {"message": "Import batch saved", "batch_id": batch.id, "entry_count": len(entry_ids)}
+
+@router.get("/import/last-batch")
+async def get_last_import_batch(user_id: str = Depends(require_auth)):
+    """Get the last import batch for undo functionality"""
+    batch = await db.import_batches.find_one({"user_id": user_id}, {"_id": 0})
+    
+    if not batch:
+        return {"has_batch": False, "batch": None}
+    
+    return {"has_batch": True, "batch": batch}
+
+@router.post("/import/undo")
+async def undo_last_import(user_id: str = Depends(require_auth)):
+    """Undo the last import by deleting all entries from that batch"""
+    batch = await db.import_batches.find_one({"user_id": user_id})
+    
+    if not batch:
+        raise HTTPException(status_code=404, detail="No import batch found to undo")
+    
+    entry_type = batch["entry_type"]
+    entry_ids = batch["entry_ids"]
+    
+    # Delete entries based on type
+    if entry_type == "income":
+        result = await db.income_entries.delete_many({
+            "id": {"$in": entry_ids},
+            "user_id": user_id
+        })
+    else:
+        result = await db.expense_entries.delete_many({
+            "id": {"$in": entry_ids},
+            "user_id": user_id
+        })
+    
+    # Remove the batch record
+    await db.import_batches.delete_one({"user_id": user_id})
+    
+    return {
+        "message": f"Successfully undid import of {result.deleted_count} {entry_type} entries",
+        "deleted_count": result.deleted_count,
+        "entry_type": entry_type
+    }
 
 # ============ EXPORT ENDPOINTS ============
 
