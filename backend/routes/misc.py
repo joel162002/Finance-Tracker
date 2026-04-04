@@ -23,6 +23,7 @@ SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "JPY", "CNY", "KRW", "SGD", 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
     name: str
     description: Optional[str] = ""
     is_active: bool = True
@@ -36,6 +37,7 @@ class ProductCreate(BaseModel):
 class ExpenseCategory(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
     name: str
     description: Optional[str] = ""
     is_active: bool = True
@@ -80,34 +82,36 @@ async def get_supported_currencies():
 # ============ PRODUCT ENDPOINTS ============
 
 @router.get("/products", response_model=List[Product])
-async def get_products(is_active: Optional[bool] = None):
-    query = {} if is_active is None else {"is_active": is_active}
+async def get_products(is_active: Optional[bool] = None, user_id: str = Depends(require_auth)):
+    query = {"user_id": user_id}
+    if is_active is not None:
+        query["is_active"] = is_active
     products = await db.products.find(query, {"_id": 0}).to_list(1000)
     return products
 
 @router.post("/products", response_model=Product)
-async def create_product(product: ProductCreate):
-    product_obj = Product(**product.model_dump())
+async def create_product(product: ProductCreate, user_id: str = Depends(require_auth)):
+    product_obj = Product(user_id=user_id, **product.model_dump())
     doc = product_obj.model_dump()
     await db.products.insert_one(doc)
     return product_obj
 
 @router.put("/products/{product_id}", response_model=Product)
-async def update_product(product_id: str, product: ProductCreate):
+async def update_product(product_id: str, product: ProductCreate, user_id: str = Depends(require_auth)):
     update_data = product.model_dump()
     result = await db.products.update_one(
-        {"id": product_id},
+        {"id": product_id, "user_id": user_id},
         {"$set": update_data}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    updated_doc = await db.products.find_one({"id": product_id}, {"_id": 0})
+    updated_doc = await db.products.find_one({"id": product_id, "user_id": user_id}, {"_id": 0})
     return Product(**updated_doc)
 
 @router.delete("/products/{product_id}")
-async def delete_product(product_id: str):
-    result = await db.products.delete_one({"id": product_id})
+async def delete_product(product_id: str, user_id: str = Depends(require_auth)):
+    result = await db.products.delete_one({"id": product_id, "user_id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted successfully"}
@@ -115,34 +119,36 @@ async def delete_product(product_id: str):
 # ============ EXPENSE CATEGORY ENDPOINTS ============
 
 @router.get("/categories", response_model=List[ExpenseCategory])
-async def get_categories(is_active: Optional[bool] = None):
-    query = {} if is_active is None else {"is_active": is_active}
+async def get_categories(is_active: Optional[bool] = None, user_id: str = Depends(require_auth)):
+    query = {"user_id": user_id}
+    if is_active is not None:
+        query["is_active"] = is_active
     categories = await db.expense_categories.find(query, {"_id": 0}).to_list(1000)
     return categories
 
 @router.post("/categories", response_model=ExpenseCategory)
-async def create_category(category: ExpenseCategoryCreate):
-    category_obj = ExpenseCategory(**category.model_dump())
+async def create_category(category: ExpenseCategoryCreate, user_id: str = Depends(require_auth)):
+    category_obj = ExpenseCategory(user_id=user_id, **category.model_dump())
     doc = category_obj.model_dump()
     await db.expense_categories.insert_one(doc)
     return category_obj
 
 @router.put("/categories/{category_id}", response_model=ExpenseCategory)
-async def update_category(category_id: str, category: ExpenseCategoryCreate):
+async def update_category(category_id: str, category: ExpenseCategoryCreate, user_id: str = Depends(require_auth)):
     update_data = category.model_dump()
     result = await db.expense_categories.update_one(
-        {"id": category_id},
+        {"id": category_id, "user_id": user_id},
         {"$set": update_data}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    updated_doc = await db.expense_categories.find_one({"id": category_id}, {"_id": 0})
+    updated_doc = await db.expense_categories.find_one({"id": category_id, "user_id": user_id}, {"_id": 0})
     return ExpenseCategory(**updated_doc)
 
 @router.delete("/categories/{category_id}")
-async def delete_category(category_id: str):
-    result = await db.expense_categories.delete_one({"id": category_id})
+async def delete_category(category_id: str, user_id: str = Depends(require_auth)):
+    result = await db.expense_categories.delete_one({"id": category_id, "user_id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category deleted successfully"}
