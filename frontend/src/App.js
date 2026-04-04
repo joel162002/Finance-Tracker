@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { MonthProvider } from './context/MonthContext';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallback } from './pages/AuthCallback';
 import { DashboardPage } from './pages/DashboardPage';
@@ -207,15 +208,17 @@ function App() {
   return (
     <AuthProvider>
       <CurrencyProvider>
-        <NotificationProvider>
-          <DataProvider>
-            <BrowserRouter>
-              <AppRouter />
-              <InstallPrompt />
-              <Toaster position="top-right" />
-            </BrowserRouter>
-          </DataProvider>
-        </NotificationProvider>
+        <MonthProvider>
+          <NotificationProvider>
+            <DataProvider>
+              <BrowserRouter>
+                <AppRouter />
+                <InstallPrompt />
+                <Toaster position="top-right" />
+              </BrowserRouter>
+            </DataProvider>
+          </NotificationProvider>
+        </MonthProvider>
       </CurrencyProvider>
     </AuthProvider>
   );

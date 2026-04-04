@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatDate, getDayName, getCurrentMonth, getTodayDate, getMonthFromDate } from '../utils/date';
+import { useMonth } from '../context/MonthContext';
+import { formatDate, getDayName, getTodayDate, getMonthFromDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,13 +45,16 @@ export const IncomePage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const { triggerRefresh } = useDataRefresh();
   const { formatCurrency } = useCurrency();
+  const { selectedMonth } = useMonth();
+  
+  // User's products from Settings
+  const [userProducts, setUserProducts] = useState([]);
   
   // Use refs to prevent input focus loss
   const productInputRef = useRef(null);
   const personInputRef = useRef(null);
   
   const [filters, setFilters] = useState({
-    month: getCurrentMonth(),
     search: '',
     product_name: '',
     person_name: '',
@@ -76,16 +80,26 @@ export const IncomePage = () => {
     persons: []
   });
 
+  // Fetch user's products from Settings
+  const fetchUserProducts = async () => {
+    try {
+      const response = await api.get('/products');
+      setUserProducts(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch user products:', error);
+    }
+  };
+
   useEffect(() => {
     fetchIncome();
     fetchSuggestions();
-  }, [filters]);
+    fetchUserProducts();
+  }, [selectedMonth, filters.search, filters.product_name, filters.person_name, filters.payment_status]);
 
   const fetchIncome = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      const params = {};
-      if (filters.month) params.month = filters.month;
+      const params = { month: selectedMonth };
       if (filters.search) params.search = filters.search;
       if (filters.product_name) params.product_name = filters.product_name;
       if (filters.person_name) params.person_name = filters.person_name;
@@ -318,11 +332,34 @@ export const IncomePage = () => {
               </div>
 
               <div>
-                <Label htmlFor="product_name">Product</Label>
-                {suggestions.products.length > 0 && (
+                <Label htmlFor="product_name">Product / Service</Label>
+                {/* User products from Settings */}
+                {userProducts.length > 0 && (
                   <>
                     <Select
-                      key="product-select"
+                      key="product-settings-select"
+                      value={userProducts.some(p => p.name === formData.product_name) ? formData.product_name : undefined}
+                      onValueChange={(value) => handleSelectChange('product_name', value)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="income-product-select">
+                        <SelectValue placeholder="Select from your products" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {userProducts.filter(p => p.is_active).map((product) => (
+                          <SelectItem key={product.id} value={product.name}>
+                            {product.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500 mt-1">Or type a new product name below</p>
+                  </>
+                )}
+                {/* Show suggestions if no user products */}
+                {userProducts.length === 0 && suggestions.products.length > 0 && (
+                  <>
+                    <Select
+                      key="product-suggest-select"
                       value={suggestions.products.includes(formData.product_name) ? formData.product_name : undefined}
                       onValueChange={(value) => handleSelectChange('product_name', value)}
                     >
@@ -488,13 +525,6 @@ export const IncomePage = () => {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <input
-              type="month"
-              value={filters.month}
-              onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm"
-              data-testid="income-month-filter"
-            />
             <Button
               onClick={handleExport}
               variant="outline"

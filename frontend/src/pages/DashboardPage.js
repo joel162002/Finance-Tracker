@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatDate, getCurrentMonth } from '../utils/date';
+import { useMonth } from '../context/MonthContext';
+import { formatDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { 
   TrendingUp, 
@@ -39,7 +40,7 @@ export const DashboardPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [quickSummary, setQuickSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const { selectedMonth } = useMonth();
   const navigate = useNavigate();
   const { refreshTrigger } = useDataRefresh();
   const { formatCurrency } = useCurrency();
@@ -183,34 +184,25 @@ export const DashboardPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-              data-testid="month-picker"
-            />
-            <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
-              <Button
-                onClick={() => navigate('/income')}
-                className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
-                data-testid="quick-add-income-button"
-              >
-                <Plus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Add Income</span>
-                <span className="sm:hidden">Income</span>
-              </Button>
-              <Button
-                onClick={() => navigate('/expenses')}
-                className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
-                data-testid="quick-add-expense-button"
-              >
-                <Plus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Add Expense</span>
-                <span className="sm:hidden">Expense</span>
-              </Button>
-            </div>
+          <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
+            <Button
+              onClick={() => navigate('/income')}
+              className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
+              data-testid="quick-add-income-button"
+            >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Income</span>
+              <span className="sm:hidden">+ Income</span>
+            </Button>
+            <Button
+              onClick={() => navigate('/expenses')}
+              className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
+              data-testid="quick-add-expense-button"
+            >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Expense</span>
+              <span className="sm:hidden">+ Expense</span>
+            </Button>
           </div>
         </div>
       </div>

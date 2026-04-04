@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useMonth } from '../context/MonthContext';
 import { NotificationDropdown } from './NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +33,9 @@ import {
   User,
   KeyRound,
   Trash2,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -42,6 +45,7 @@ export const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   const { currency, setCurrency, currencyInfo } = useCurrency();
+  const { selectedMonth, changeMonth, getMonthOptions, getShortMonthLabel } = useMonth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [changingCurrency, setChangingCurrency] = useState(false);
 
@@ -69,6 +73,14 @@ export const Layout = ({ children }) => {
       toast.error('Failed to change currency');
     }
     setChangingCurrency(false);
+  };
+
+  // Navigate to previous/next month
+  const navigateMonth = (direction) => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const newDate = new Date(year, month - 1 + direction, 1);
+    const newMonth = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
+    changeMonth(newMonth);
   };
 
   return (
@@ -107,6 +119,41 @@ export const Layout = ({ children }) => {
             </div>
 
             <div className="hidden lg:flex items-center gap-3">
+              {/* Global Month Selector */}
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                <button
+                  onClick={() => navigateMonth(-1)}
+                  className="p-1.5 hover:bg-white rounded-md transition-colors"
+                  data-testid="month-prev-btn"
+                >
+                  <ChevronLeft className="w-4 h-4 text-slate-600" />
+                </button>
+                <Select value={selectedMonth} onValueChange={changeMonth}>
+                  <SelectTrigger className="w-[140px] h-8 border-0 bg-transparent font-medium text-slate-700" data-testid="month-selector">
+                    <SelectValue>
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4" />
+                        <span>{getShortMonthLabel(selectedMonth)}</span>
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getMonthOptions().map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  onClick={() => navigateMonth(1)}
+                  className="p-1.5 hover:bg-white rounded-md transition-colors"
+                  data-testid="month-next-btn"
+                >
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
+
               {/* Currency Selector */}
               <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
                 <SelectTrigger className="w-[100px] h-9 rounded-lg border-slate-200" data-testid="header-currency-select">
@@ -189,11 +236,43 @@ export const Layout = ({ children }) => {
               </Button>
             </div>
 
-            {/* Mobile: Currency + Notifications + Menu */}
-            <div className="flex lg:hidden items-center gap-1.5">
+            {/* Mobile: Month + Currency + Notifications + Menu */}
+            <div className="flex lg:hidden items-center gap-1">
+              {/* Mobile Month Selector */}
+              <div className="flex items-center bg-slate-100 rounded-lg">
+                <button
+                  onClick={() => navigateMonth(-1)}
+                  className="p-1.5 hover:bg-white rounded-l-lg transition-colors"
+                  data-testid="mobile-month-prev-btn"
+                >
+                  <ChevronLeft className="w-4 h-4 text-slate-600" />
+                </button>
+                <Select value={selectedMonth} onValueChange={changeMonth}>
+                  <SelectTrigger className="w-[85px] h-8 border-0 bg-transparent text-xs font-medium text-slate-700 px-1" data-testid="mobile-month-selector">
+                    <SelectValue>
+                      <span>{getShortMonthLabel(selectedMonth)}</span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getMonthOptions().map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  onClick={() => navigateMonth(1)}
+                  className="p-1.5 hover:bg-white rounded-r-lg transition-colors"
+                  data-testid="mobile-month-next-btn"
+                >
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
+
               {/* Mobile Currency Selector */}
               <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
-                <SelectTrigger className="w-[65px] h-9 rounded-lg border-slate-200 text-sm" data-testid="mobile-currency-select">
+                <SelectTrigger className="w-[55px] h-8 rounded-lg border-slate-200 text-xs" data-testid="mobile-currency-select">
                   <SelectValue>
                     <span className="font-mono">{currencyInfo[currency]?.symbol}</span>
                   </SelectValue>
@@ -219,7 +298,7 @@ export const Layout = ({ children }) => {
                 data-testid="mobile-menu-toggle"
                 aria-label="Toggle menu"
               >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>

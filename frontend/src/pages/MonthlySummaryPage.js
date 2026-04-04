@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { formatCurrency } from '../utils/currency';
-import { formatDate, getCurrentMonth } from '../utils/date';
+import { formatDate } from '../utils/date';
+import { useMonth } from '../context/MonthContext';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp, TrendingDown, Award } from 'lucide-react';
 import {
@@ -21,7 +22,7 @@ const EXPENSE_COLOR = '#DC2626';
 export const MonthlySummaryPage = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const { selectedMonth, getMonthLabel } = useMonth();
 
   useEffect(() => {
     fetchSummary();
@@ -56,21 +57,13 @@ export const MonthlySummaryPage = () => {
     <div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h1 className="text-2xl sm:text-3xl font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Monthly Summary
           </h1>
-          <p className="mt-2 text-base leading-relaxed text-slate-600">
-            Detailed financial overview for the selected month
+          <p className="mt-1 text-slate-600">
+            Financial overview for {getMonthLabel(selectedMonth)}
           </p>
         </div>
-
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-          data-testid="monthly-summary-month-picker"
-        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

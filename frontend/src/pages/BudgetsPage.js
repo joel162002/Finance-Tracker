@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { useMonth } from '../context/MonthContext';
 import { CURRENCY_INFO } from '../utils/currency';
-import { getCurrentMonth } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +48,7 @@ const DEFAULT_CATEGORIES = [
 
 export const BudgetsPage = () => {
   const { currency, formatCurrency } = useCurrency();
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const { selectedMonth, getMonthLabel } = useMonth();
   const [budgetStatus, setBudgetStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,6 +57,9 @@ export const BudgetsPage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
   const [expenseCategories, setExpenseCategories] = useState([]);
+  
+  // User's categories from Settings
+  const [userCategories, setUserCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     category: 'total',
@@ -68,6 +71,7 @@ export const BudgetsPage = () => {
   useEffect(() => {
     fetchBudgetStatus();
     fetchExpenseCategories();
+    fetchUserCategories();
   }, [selectedMonth]);
 
   useEffect(() => {
@@ -84,9 +88,19 @@ export const BudgetsPage = () => {
     }
   };
 
-  // Combine default and expense categories, remove duplicates
+  const fetchUserCategories = async () => {
+    try {
+      const response = await api.get('/categories');
+      setUserCategories(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch user categories:', error);
+    }
+  };
+
+  // Combine user categories, expense categories, and defaults - remove duplicates
   const allCategories = [...new Set([
     'Total (All Expenses)',
+    ...userCategories.filter(c => c.is_active).map(c => c.name),
     ...expenseCategories,
     ...DEFAULT_CATEGORIES.filter(c => c !== 'Total (All Expenses)')
   ])];
@@ -180,16 +194,6 @@ export const BudgetsPage = () => {
     return 'bg-emerald-500';
   };
 
-  const months = [];
-  const currentDate = new Date();
-  for (let i = -3; i <= 6; i++) {
-    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
-    months.push({
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
-    });
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -200,16 +204,6 @@ export const BudgetsPage = () => {
           <p className="text-slate-600 mt-1">Set spending limits and track your budget</p>
         </div>
         <div className="flex gap-3">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button 
             onClick={() => { resetForm(); setDialogOpen(true); }}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"

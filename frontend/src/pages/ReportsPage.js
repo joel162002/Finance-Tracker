@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { getCurrentMonth } from '../utils/date';
+import { useMonth } from '../context/MonthContext';
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
 import {
@@ -18,7 +18,7 @@ import {
 export const ReportsPage = () => {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const { selectedMonth, getMonthLabel } = useMonth();
   const { formatCurrency } = useCurrency();
 
   useEffect(() => {
@@ -58,22 +58,13 @@ export const ReportsPage = () => {
     <div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 no-print">
         <div>
-          <h1 className="text-4xl sm:text-5xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            Reports & Analytics
+          <h1 className="text-2xl sm:text-3xl font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            Reports
           </h1>
-          <p className="mt-2 text-base leading-relaxed text-slate-600">
-            Detailed analytics and insights
-          </p>
+          <p className="text-slate-600 mt-1">Financial breakdown for {getMonthLabel(selectedMonth)}</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-            data-testid="reports-month-picker"
-          />
           <Button
             onClick={handlePrint}
             variant="outline"

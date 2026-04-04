@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { formatDate, getDayName, getCurrentMonth, getTodayDate } from '../utils/date';
+import { useMonth } from '../context/MonthContext';
+import { formatDate, getDayName, getTodayDate } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,13 +45,16 @@ export const ExpensesPage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const { triggerRefresh } = useDataRefresh();
   const { formatCurrency } = useCurrency();
+  const { selectedMonth } = useMonth();
+  
+  // User's categories from Settings
+  const [userCategories, setUserCategories] = useState([]);
   
   // Use refs to prevent input focus loss
   const descriptionInputRef = useRef(null);
   const categoryInputRef = useRef(null);
   
   const [filters, setFilters] = useState({
-    month: getCurrentMonth(),
     search: '',
     category_name: ''
   });
@@ -71,16 +75,26 @@ export const ExpensesPage = () => {
 
   const [categories, setCategories] = useState([]);
 
+  // Fetch user's categories from Settings
+  const fetchUserCategories = async () => {
+    try {
+      const response = await api.get('/categories');
+      setUserCategories(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch user categories:', error);
+    }
+  };
+
   useEffect(() => {
     fetchExpenses();
     fetchCategories();
-  }, [filters]);
+    fetchUserCategories();
+  }, [selectedMonth, filters.search, filters.category_name]);
 
   const fetchExpenses = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      const params = {};
-      if (filters.month) params.month = filters.month;
+      const params = { month: selectedMonth };
       if (filters.search) params.search = filters.search;
       if (filters.category_name) params.category_name = filters.category_name;
 
@@ -318,10 +332,33 @@ export const ExpensesPage = () => {
 
               <div>
                 <Label htmlFor="category_name">Category</Label>
-                {categories.length > 0 && (
+                {/* User categories from Settings */}
+                {userCategories.length > 0 && (
                   <>
                     <Select
-                      key="category-select"
+                      key="category-settings-select"
+                      value={userCategories.some(c => c.name === formData.category_name) ? formData.category_name : undefined}
+                      onValueChange={(value) => handleSelectChange('category_name', value)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-slate-50 mt-1.5" data-testid="expense-category-select">
+                        <SelectValue placeholder="Select from your categories" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {userCategories.filter(c => c.is_active).map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500 mt-1">Or type a new category below</p>
+                  </>
+                )}
+                {/* Show suggestions if no user categories */}
+                {userCategories.length === 0 && categories.length > 0 && (
+                  <>
+                    <Select
+                      key="category-suggest-select"
                       value={categories.includes(formData.category_name) ? formData.category_name : undefined}
                       onValueChange={(value) => handleSelectChange('category_name', value)}
                     >
@@ -449,13 +486,6 @@ export const ExpensesPage = () => {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <input
-              type="month"
-              value={filters.month}
-              onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm"
-              data-testid="expense-month-filter"
-            />
             <Button
               onClick={handleExport}
               variant="outline"
