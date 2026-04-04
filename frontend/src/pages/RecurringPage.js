@@ -435,7 +435,7 @@ export const RecurringPage = () => {
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="gap-3">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
                 {saving ? 'Saving...' : (editingItem ? 'Update' : 'Create')}

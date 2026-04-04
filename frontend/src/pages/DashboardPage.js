@@ -199,9 +199,9 @@ export const DashboardPage = () => {
               className="bg-red-600 text-white hover:bg-red-700 rounded-xl px-4 sm:px-6 py-2.5 text-sm transition-all hover:-translate-y-0.5"
               data-testid="quick-add-expense-button"
             >
-              <Plus className="w-4 h-4 sm:mr-2" />
+              <TrendingDown className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Expense</span>
-              <span className="sm:hidden">+ Expense</span>
+              <span className="sm:hidden">- Expense</span>
             </Button>
           </div>
         </div>

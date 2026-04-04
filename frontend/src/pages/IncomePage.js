@@ -390,7 +390,7 @@ export const IncomePage = () => {
               </div>
 
               <div>
-                <Label htmlFor="person_name">Customer / Person</Label>
+                <Label htmlFor="person_name">Customer / Client</Label>
                 {suggestions.persons.length > 0 && (
                   <>
                     <Select
@@ -466,7 +466,7 @@ export const IncomePage = () => {
                 />
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="gap-3">
                 <Button
                   type="button"
                   variant="outline"
