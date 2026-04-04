@@ -113,10 +113,10 @@ export const Layout = ({ children }) => {
                   <ChevronLeft className="w-4 h-4 text-slate-700" />
                 </button>
                 <Select value={selectedMonth} onValueChange={changeMonth}>
-                  <SelectTrigger className="w-[140px] h-9 border-0 bg-white/50 hover:bg-white/70 rounded-lg font-semibold text-slate-800 shadow-sm transition-all duration-200" data-testid="month-selector">
+                  <SelectTrigger className="w-[155px] h-9 border-0 bg-white/50 hover:bg-white/70 rounded-lg font-semibold text-slate-800 shadow-sm transition-all duration-200" data-testid="month-selector">
                     <SelectValue>
                       <span className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-emerald-600" />
+                        <Calendar className="w-5 h-5 text-emerald-600" strokeWidth={2} />
                         <span>{getShortMonthLabel(selectedMonth)}</span>
                       </span>
                     </SelectValue>
@@ -210,10 +210,10 @@ export const Layout = ({ children }) => {
                   <ChevronLeft className="w-4 h-4 text-slate-700" />
                 </button>
                 <Select value={selectedMonth} onValueChange={changeMonth}>
-                  <SelectTrigger className="w-[90px] h-8 border-0 bg-white/50 text-xs font-semibold text-slate-800 px-2 rounded-none" data-testid="mobile-month-selector">
+                  <SelectTrigger className="w-[110px] h-8 border-0 bg-white/50 text-xs font-semibold text-slate-800 px-2 rounded-none" data-testid="mobile-month-selector">
                     <SelectValue>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-emerald-600" />
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-emerald-600" strokeWidth={2} />
                         <span>{getShortMonthLabel(selectedMonth)}</span>
                       </span>
                     </SelectValue>
