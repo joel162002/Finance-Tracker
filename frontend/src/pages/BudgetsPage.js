@@ -33,19 +33,6 @@ import {
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, PiggyBank, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react';
 
-const DEFAULT_CATEGORIES = [
-  'Total (All Expenses)',
-  'Food',
-  'Transportation',
-  'Utilities',
-  'Entertainment',
-  'Shopping',
-  'Healthcare',
-  'Education',
-  'Personal',
-  'Other'
-];
-
 export const BudgetsPage = () => {
   const { currency, formatCurrency } = useCurrency();
   const { selectedMonth, getMonthLabel } = useMonth();
@@ -56,7 +43,6 @@ export const BudgetsPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [expenseCategories, setExpenseCategories] = useState([]);
   
   // User's categories from Settings
   const [userCategories, setUserCategories] = useState([]);
@@ -70,23 +56,12 @@ export const BudgetsPage = () => {
 
   useEffect(() => {
     fetchBudgetStatus();
-    fetchExpenseCategories();
     fetchUserCategories();
   }, [selectedMonth]);
 
   useEffect(() => {
     setFormData(prev => ({ ...prev, currency }));
   }, [currency]);
-
-  const fetchExpenseCategories = async () => {
-    try {
-      const response = await api.get('/suggestions/categories');
-      const categories = response.data.suggestions || [];
-      setExpenseCategories(categories);
-    } catch (error) {
-      console.error('Failed to fetch expense categories:', error);
-    }
-  };
 
   const fetchUserCategories = async () => {
     try {
@@ -97,13 +72,11 @@ export const BudgetsPage = () => {
     }
   };
 
-  // Combine user categories, expense categories, and defaults - remove duplicates
-  const allCategories = [...new Set([
+  // Only show "Total (All Expenses)" and user's own categories from Settings
+  const allCategories = [
     'Total (All Expenses)',
-    ...userCategories.filter(c => c.is_active).map(c => c.name),
-    ...expenseCategories,
-    ...DEFAULT_CATEGORIES.filter(c => c !== 'Total (All Expenses)')
-  ])];
+    ...userCategories.filter(c => c.is_active).map(c => c.name)
+  ];
 
   const fetchBudgetStatus = async () => {
     try {
