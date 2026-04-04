@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCurrency } from '../context/CurrencyContext';
 import { useMonth } from '../context/MonthContext';
 import { NotificationDropdown } from './NotificationDropdown';
 import { Button } from '@/components/ui/button';
@@ -33,21 +32,17 @@ import {
   User,
   KeyRound,
   Trash2,
-  Bell,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
 export const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, updateUser } = useAuth();
-  const { currency, setCurrency, currencyInfo } = useCurrency();
+  const { user, logout } = useAuth();
   const { selectedMonth, changeMonth, getMonthOptions, getShortMonthLabel } = useMonth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [changingCurrency, setChangingCurrency] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -62,17 +57,6 @@ export const Layout = ({ children }) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleCurrencyChange = async (newCurrency) => {
-    setChangingCurrency(true);
-    const success = await setCurrency(newCurrency);
-    if (success) {
-      toast.success(`Currency changed to ${currencyInfo[newCurrency]?.name || newCurrency}`);
-    } else {
-      toast.error('Failed to change currency');
-    }
-    setChangingCurrency(false);
   };
 
   // Navigate to previous/next month
@@ -153,28 +137,6 @@ export const Layout = ({ children }) => {
                   <ChevronRight className="w-4 h-4 text-slate-700" />
                 </button>
               </div>
-
-              {/* Currency Selector */}
-              <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
-                <SelectTrigger className="w-[100px] h-9 rounded-lg border-slate-200" data-testid="header-currency-select">
-                  <SelectValue>
-                    <span className="flex items-center gap-1.5">
-                      <span className="font-mono text-base">{currencyInfo[currency]?.symbol}</span>
-                      <span className="text-sm">{currency}</span>
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(currencyInfo).map(([code, info]) => (
-                    <SelectItem key={code} value={code}>
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono text-base w-6">{info.symbol}</span>
-                        <span>{code}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
               {/* Notification Bell */}
               <NotificationDropdown />
@@ -272,25 +234,6 @@ export const Layout = ({ children }) => {
                   <ChevronRight className="w-4 h-4 text-slate-700" />
                 </button>
               </div>
-
-              {/* Mobile Currency Selector */}
-              <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
-                <SelectTrigger className="w-[55px] h-8 rounded-lg border-slate-200 text-xs" data-testid="mobile-currency-select">
-                  <SelectValue>
-                    <span className="font-mono">{currencyInfo[currency]?.symbol}</span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(currencyInfo).map(([code, info]) => (
-                    <SelectItem key={code} value={code}>
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono w-5">{info.symbol}</span>
-                        <span>{code}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
 
               {/* Mobile Notification Bell */}
               <NotificationDropdown />

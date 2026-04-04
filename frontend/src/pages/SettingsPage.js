@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { useNotifications } from '../context/NotificationContext';
+import { CURRENCY_INFO } from '../utils/currency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,18 +33,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Upload, Calendar, Bell } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Calendar, Bell, Coins } from 'lucide-react';
 import { getDayName, getCurrentMonth } from '../utils/date';
 
 import { BackupRestore } from '../components/BackupRestore';
 
 export const SettingsPage = () => {
-  const { formatCurrency, getCurrencySymbol } = useCurrency();
+  const { formatCurrency, getCurrencySymbol, currency, setCurrency } = useCurrency();
   const { preferences, updatePreferences } = useNotifications();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [changingCurrency, setChangingCurrency] = useState(false);
   
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -64,6 +66,17 @@ export const SettingsPage = () => {
   const [importMonth, setImportMonth] = useState(getCurrentMonth()); // New: Month selector
   const [parsedEntries, setParsedEntries] = useState([]);
   const [importing, setImporting] = useState(false);
+
+  const handleCurrencyChange = async (newCurrency) => {
+    setChangingCurrency(true);
+    const success = await setCurrency(newCurrency);
+    if (success) {
+      toast.success(`Currency changed to ${CURRENCY_INFO[newCurrency]?.name || newCurrency}`);
+    } else {
+      toast.error('Failed to change currency');
+    }
+    setChangingCurrency(false);
+  };
 
   useEffect(() => {
     fetchData();
@@ -240,13 +253,40 @@ export const SettingsPage = () => {
 
   return (
     <div>
-      <div className="mb-4 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Settings
-        </h1>
-        <p className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base leading-relaxed text-slate-600">
-          Manage your products, categories, and import data
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl tracking-tight font-light text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            Settings
+          </h1>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base leading-relaxed text-slate-600">
+            Manage your products, categories, and import data
+          </p>
+        </div>
+        
+        {/* Currency Selector */}
+        <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-xl p-2 border border-white/50 shadow-md">
+          <Coins className="w-4 h-4 text-emerald-600 ml-1" />
+          <Select value={currency} onValueChange={handleCurrencyChange} disabled={changingCurrency}>
+            <SelectTrigger className="w-[130px] sm:w-[150px] h-9 border-0 bg-white/50 hover:bg-white/70 rounded-lg font-semibold text-slate-800 shadow-sm transition-all duration-200" data-testid="settings-currency-select">
+              <SelectValue>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono text-base">{CURRENCY_INFO[currency]?.symbol}</span>
+                  <span className="text-sm">{currency}</span>
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(CURRENCY_INFO).map(([code, info]) => (
+                <SelectItem key={code} value={code}>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-base w-6">{info.symbol}</span>
+                    <span>{code} - {info.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="products" className="space-y-4 sm:space-y-6">
