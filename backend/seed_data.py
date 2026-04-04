@@ -29,6 +29,7 @@ async def seed_database():
         "email": "joeljalapitjr@gmail.com",
         "password": "joelpogi",
         "name": "Joel Jalapit Jr",
+        "email_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(main_user)
@@ -40,6 +41,7 @@ async def seed_database():
         "email": "demo@finance.com",
         "password": "demo123",
         "name": "Demo User",
+        "email_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(demo_user)
