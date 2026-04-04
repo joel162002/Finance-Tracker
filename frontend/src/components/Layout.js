@@ -119,20 +119,20 @@ export const Layout = ({ children }) => {
             </div>
 
             <div className="hidden lg:flex items-center gap-3">
-              {/* Global Month Selector */}
-              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+              {/* Global Month Selector - Glassy Design */}
+              <div className="flex items-center gap-0.5 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-xl p-1 border border-white/50 shadow-lg shadow-emerald-500/5">
                 <button
                   onClick={() => navigateMonth(-1)}
-                  className="p-1.5 hover:bg-white rounded-md transition-colors"
+                  className="p-2 hover:bg-white/60 rounded-lg transition-all duration-200 hover:shadow-sm"
                   data-testid="month-prev-btn"
                 >
-                  <ChevronLeft className="w-4 h-4 text-slate-600" />
+                  <ChevronLeft className="w-4 h-4 text-slate-700" />
                 </button>
                 <Select value={selectedMonth} onValueChange={changeMonth}>
-                  <SelectTrigger className="w-[140px] h-8 border-0 bg-transparent font-medium text-slate-700" data-testid="month-selector">
+                  <SelectTrigger className="w-[140px] h-9 border-0 bg-white/50 hover:bg-white/70 rounded-lg font-semibold text-slate-800 shadow-sm transition-all duration-200" data-testid="month-selector">
                     <SelectValue>
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
+                      <span className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-emerald-600" />
                         <span>{getShortMonthLabel(selectedMonth)}</span>
                       </span>
                     </SelectValue>
@@ -147,10 +147,10 @@ export const Layout = ({ children }) => {
                 </Select>
                 <button
                   onClick={() => navigateMonth(1)}
-                  className="p-1.5 hover:bg-white rounded-md transition-colors"
+                  className="p-2 hover:bg-white/60 rounded-lg transition-all duration-200 hover:shadow-sm"
                   data-testid="month-next-btn"
                 >
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                  <ChevronRight className="w-4 h-4 text-slate-700" />
                 </button>
               </div>
 
@@ -237,20 +237,23 @@ export const Layout = ({ children }) => {
             </div>
 
             {/* Mobile: Month + Currency + Notifications + Menu */}
-            <div className="flex lg:hidden items-center gap-1">
-              {/* Mobile Month Selector */}
-              <div className="flex items-center bg-slate-100 rounded-lg">
+            <div className="flex lg:hidden items-center gap-1.5">
+              {/* Mobile Month Selector - Glassy Design */}
+              <div className="flex items-center bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 backdrop-blur-sm rounded-xl border border-white/50 shadow-md shadow-emerald-500/5">
                 <button
                   onClick={() => navigateMonth(-1)}
-                  className="p-1.5 hover:bg-white rounded-l-lg transition-colors"
+                  className="p-1.5 hover:bg-white/60 rounded-l-xl transition-all duration-200"
                   data-testid="mobile-month-prev-btn"
                 >
-                  <ChevronLeft className="w-4 h-4 text-slate-600" />
+                  <ChevronLeft className="w-4 h-4 text-slate-700" />
                 </button>
                 <Select value={selectedMonth} onValueChange={changeMonth}>
-                  <SelectTrigger className="w-[85px] h-8 border-0 bg-transparent text-xs font-medium text-slate-700 px-1" data-testid="mobile-month-selector">
+                  <SelectTrigger className="w-[90px] h-8 border-0 bg-white/50 text-xs font-semibold text-slate-800 px-2 rounded-none" data-testid="mobile-month-selector">
                     <SelectValue>
-                      <span>{getShortMonthLabel(selectedMonth)}</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-emerald-600" />
+                        <span>{getShortMonthLabel(selectedMonth)}</span>
+                      </span>
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -263,10 +266,10 @@ export const Layout = ({ children }) => {
                 </Select>
                 <button
                   onClick={() => navigateMonth(1)}
-                  className="p-1.5 hover:bg-white rounded-r-lg transition-colors"
+                  className="p-1.5 hover:bg-white/60 rounded-r-xl transition-all duration-200"
                   data-testid="mobile-month-next-btn"
                 >
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                  <ChevronRight className="w-4 h-4 text-slate-700" />
                 </button>
               </div>
 
