@@ -130,6 +130,10 @@ export const LoginPage = () => {
             <p className="text-white/30 text-xs mt-6">
               By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>
+            
+            <p className="text-white/40 text-xs mt-4 pt-4 border-t border-white/10">
+              Built by <span className="text-emerald-400/70 font-medium">Joel Jalapit Jr.</span>
+            </p>
           </div>
           
         </div>
